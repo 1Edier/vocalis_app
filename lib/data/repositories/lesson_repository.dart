@@ -1,6 +1,7 @@
 // lib/data/repositories/lesson_repository.dart
 
 import 'package:vocalis/data/models/lesson_model.dart';
+import 'package:vocalis/data/models/exercise_model.dart';
 
 class LessonRepository {
   Future<List<LessonCategory>> getLessonCategories() async {
@@ -25,5 +26,19 @@ class LessonRepository {
       Lesson(id: 'f5', title: 'Cr', iconName: '', isLocked: true),
       Lesson(id: 'f6', title: 'Fr', iconName: '', isLocked: true),
     ];
+  }
+
+  Future<ExerciseModel> getExerciseForLesson(String lessonId) async {
+    // Simulamos una llamada de red para obtener los detalles del ejercicio
+    await Future.delayed(const Duration(milliseconds: 600));
+
+    // Devolvemos datos mockeados. En una app real, esto vendría de una API.
+    return const ExerciseModel(
+      id: 'ex_rr_01',
+      phoneme: 'Rr',
+      word: 'Carro',
+      audioUrl: 'https://example.com/audio/carro.mp3', // URL de audio de ejemplo
+      avatarUrl: 'https://i.pravatar.cc/150?img=12', // URL de avatar de ejemplo
+    );
   }
 }

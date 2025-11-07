@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:vocalis/core/theme/app_theme.dart';
-import 'package:vocalis/data/models/lesson_model.dart';
-import 'package:vocalis/data/repositories/lesson_repository.dart';
-import 'package:vocalis/presentation/bloc/lesson_detail/lesson_detail_bloc.dart';
+import '../../../core/theme/app_theme.dart';
+import '../../../data/models/lesson_model.dart';
+import '../../../data/repositories/lesson_repository.dart';
+import '../../bloc/lesson_detail/lesson_detail_bloc.dart';
+import '../exercise/exercise_screen.dart';
 
 class LessonDetailScreen extends StatelessWidget {
   final LessonCategory category;
@@ -53,7 +54,10 @@ class LessonDetailScreen extends StatelessWidget {
                 ),
               );
             }
-            return const Center(child: Text("Error al cargar lecciones"));
+            if (state is LessonDetailLoadFailure) {
+              return Center(child: Text(state.error));
+            }
+            return const SizedBox.shrink();
           },
         ),
       ),
@@ -71,6 +75,7 @@ class LessonDetailScreen extends StatelessWidget {
       ),
       child: Column(
         children: [
+          // Puedes usar un asset local o una URL de red
           Image.network('https://cdn-icons-png.flaticon.com/512/3209/3209861.png', height: 60),
           const SizedBox(height: 12),
           const Text('Lvl 1', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
@@ -118,54 +123,66 @@ class _LessonCircle extends StatelessWidget {
     final Color circleColor = lesson.isLocked ? const Color(0xFFE0E0E0) : AppTheme.greenAccent;
     final Color iconColor = lesson.isLocked ? const Color(0xFFBDBDBD) : Colors.white;
 
-    return Column(
-      children: [
-        Stack(
-          clipBehavior: Clip.none,
-          alignment: Alignment.center,
-          children: [
-            Container(
-              width: 80,
-              height: 80,
-              decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.white,
-                  boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.3), blurRadius: 5, offset: const Offset(0, 3))]
-              ),
-            ),
-            CircleAvatar(
-              radius: 35,
-              backgroundColor: circleColor,
-              child: Icon(
-                lesson.isLocked ? Icons.lock : _getIconFromString(lesson.iconName), // CORREGIDO
-                color: iconColor,
-                size: 35,
-              ),
-            ),
-            if (lesson.badgeCount > 0) // CORREGIDO
-              Positioned(
-                bottom: -5,
-                right: -5,
-                child: CircleAvatar(
-                  radius: 12,
-                  backgroundColor: Colors.orange[600],
-                  child: Text(
-                    lesson.badgeCount.toString(), // CORREGIDO
-                    style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
-                  ),
+    // Se envuelve el widget en un InkWell para el efecto visual al tocar
+    // y un GestureDetector para la lógica de navegación.
+    return InkWell(
+      onTap: lesson.isLocked ? null : () {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => ExerciseScreen(lesson: lesson),
+          ),
+        );
+      },
+      borderRadius: BorderRadius.circular(50), // Hace que el "splash" sea redondo
+      child: Column(
+        children: [
+          Stack(
+            clipBehavior: Clip.none,
+            alignment: Alignment.center,
+            children: [
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white,
+                    boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.3), blurRadius: 5, offset: const Offset(0, 3))]
                 ),
               ),
-            if (lesson.isLocked)
-              Positioned(
-                bottom: -8,
-                child: Icon(Icons.workspace_premium_rounded, color: Colors.orange[300], size: 24),
+              CircleAvatar(
+                radius: 35,
+                backgroundColor: circleColor,
+                child: Icon(
+                  lesson.isLocked ? Icons.lock : _getIconFromString(lesson.iconName),
+                  color: iconColor,
+                  size: 35,
+                ),
               ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        if (!lesson.isLocked)
-          Text(lesson.title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-      ],
+              if (lesson.badgeCount > 0)
+                Positioned(
+                  bottom: -5,
+                  right: -5,
+                  child: CircleAvatar(
+                    radius: 12,
+                    backgroundColor: Colors.orange[600],
+                    child: Text(
+                      lesson.badgeCount.toString(),
+                      style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+              if (lesson.isLocked)
+                Positioned(
+                  bottom: -8,
+                  child: Icon(Icons.workspace_premium_rounded, color: Colors.orange[300], size: 24),
+                ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          if (!lesson.isLocked)
+            Text(lesson.title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        ],
+      ),
     );
   }
 }
