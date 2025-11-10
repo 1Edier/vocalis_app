@@ -10,9 +10,6 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Aún usamos LessonRepository para obtener las categorías principales
-    // Este repositorio podría ser renombrado a "CategoryRepository" en el futuro
-    // para mayor claridad.
     return BlocProvider(
       create: (context) => HomeBloc(
         lessonRepository: RepositoryProvider.of<LessonRepository>(context),
@@ -104,29 +101,45 @@ class _LessonCategorySection extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 16),
-          // Por ahora, asumimos que siempre hay 5 niveles, algunos bloqueados
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(
-              children: [
-                _LessonCard(
-                  level: 1,
-                  progress: category.completed / category.total, // El progreso podría ser más granular por nivel
-                  onTap: () {
-                    // --- NAVEGACIÓN ACTUALIZADA ---
-                    Navigator.of(context).push(MaterialPageRoute(
-                        builder: (_) => LessonDetailScreen(category: category, level: 1)));
-                  },
-                ),
-                const SizedBox(width: 16),
-                const _LessonCard(level: 2, isLocked: true),
-                const SizedBox(width: 16),
-                const _LessonCard(level: 3, isLocked: true),
-                const SizedBox(width: 16),
-                const _LessonCard(level: 4, isLocked: true),
-                const SizedBox(width: 16),
-                const _LessonCard(level: 5, isLocked: true),
-              ],
+              // --- LÓGICA DE NIVELES ACTUALIZADA ---
+              // Usamos List.generate para crear las 5 tarjetas de nivel dinámicamente.
+              children: List.generate(5, (index) {
+                // El nivel que se muestra en la tarjeta (siempre de 1 a 5).
+                final displayLevel = index + 1;
+
+                // Determina si esta categoría necesita un ajuste de nivel.
+                final bool isAdvancedCategory = category.title == 'Ritmo' || category.title == 'Entonación';
+
+                // El nivel real que se enviará a la API.
+                // Si es "Ritmo" o "Entonación", se le suma 1 (Lvl 1 -> API 2, Lvl 2 -> API 3, etc.).
+                // Si es "Fonemas", se queda igual (Lvl 1 -> API 1).
+                final apiLevel = isAdvancedCategory ? displayLevel + 1 : displayLevel;
+
+                // Lógica simple para bloquear niveles (puedes hacerla más compleja después).
+                final bool isLocked = displayLevel > 1;
+
+                return Padding(
+                  // Añade espacio a la derecha de cada tarjeta, excepto la última.
+                  padding: EdgeInsets.only(right: index == 4 ? 0 : 16.0),
+                  child: _LessonCard(
+                    level: displayLevel,
+                    // Solo muestra la barra de progreso en la primera tarjeta desbloqueada.
+                    progress: !isLocked ? (category.completed / category.total) : 0.0,
+                    isLocked: isLocked,
+                    onTap: () {
+                      Navigator.of(context).push(MaterialPageRoute(
+                        builder: (_) => LessonDetailScreen(
+                          category: category,
+                          level: apiLevel, // <<< Se pasa el nivel correcto a la API
+                        ),
+                      ));
+                    },
+                  ),
+                );
+              }),
             ),
           ),
         ],
@@ -149,8 +162,8 @@ class _LessonCard extends StatelessWidget {
       onTap: isLocked ? null : onTap,
       borderRadius: BorderRadius.circular(20),
       child: Container(
-        width: 140, // Ancho fijo para las tarjetas
-        height: 160, // Alto fijo para las tarjetas
+        width: 140,
+        height: 160,
         decoration: BoxDecoration(
           color: isLocked ? const Color(0xFFE0E0E0) : Colors.white,
           borderRadius: BorderRadius.circular(20),

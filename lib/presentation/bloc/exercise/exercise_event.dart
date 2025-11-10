@@ -22,3 +22,7 @@ class ValidateRecordingRequested extends ExerciseEvent {
   final String filePath;
   const ValidateRecordingRequested(this.filePath);
 }
+class PlayInstructionRequested extends ExerciseEvent {
+  final String textToSpeak;
+  const PlayInstructionRequested(this.textToSpeak);
+}

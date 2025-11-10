@@ -48,12 +48,14 @@ dependencies:
 
   audioplayers: ^6.5.1    # Para reproducir el audio grabado
   path_provider: ^2.1.1   # Para obtener una ruta donde guardar el archivo
+  flutter_tts: ^3.8.5
 
 
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  flutter_launcher_icons: ^0.13.1
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
@@ -105,3 +107,8 @@ flutter:
   # see https://flutter.dev/to/font-from-package
 dependency_overrides:
   record_linux: ^1.2.1
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/icon/logo1.png"

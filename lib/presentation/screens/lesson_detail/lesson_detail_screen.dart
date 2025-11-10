@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/exercise_model.dart';
-import '../../../data/models/lesson_model.dart'; // Aún lo necesitamos para el título
+import '../../../data/models/lesson_model.dart';
 import '../../../data/repositories/exercise_repository.dart';
 import '../../bloc/lesson_detail/lesson_detail_bloc.dart';
 import '../exercise/exercise_screen.dart';
@@ -17,14 +17,26 @@ class LessonDetailScreen extends StatelessWidget {
     required this.level,
   });
 
+  // --- NUEVA FUNCIÓN AUXILIAR ---
+  // Esta función elige un icono temático basado en la categoría.
+  IconData _getMainLevelIcon(LessonCategory category) {
+    switch (category.title) {
+      case 'Fonemas':
+        return Icons.record_voice_over_rounded; // Icono de persona hablando/practicando
+      case 'Ritmo':
+        return Icons.music_note_rounded; // Icono de nota musical
+      case 'Entonación':
+        return Icons.graphic_eq_rounded; // Icono de ecualizador (ondas de sonido)
+      default:
+        return Icons.star_rounded; // Un icono por defecto si la categoría no coincide
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    // Mapeamos el título de la UI a la categoría de la API
-    // ej: "Fonemas" -> "fonema"
     final apiCategory = category.title.toLowerCase().replaceAll('ó', 'o').replaceAll('á', 'a');
 
     return BlocProvider(
-      // Proveemos una instancia del ExerciseRepository aquí
       create: (context) => LessonDetailBloc(
         exerciseRepository: ExerciseRepository(),
       )..add(FetchExercisesForLevel(category: apiCategory, level: level)),
@@ -53,7 +65,6 @@ class LessonDetailScreen extends StatelessWidget {
               if (state.exercises.isEmpty) {
                 return const Center(child: Text('No hay ejercicios para este nivel.'));
               }
-              // Construimos el layout de "camino" vertical
               return _buildPathLayout(context, state.exercises);
             }
             if (state is LessonDetailLoadFailure) {
@@ -66,9 +77,7 @@ class LessonDetailScreen extends StatelessWidget {
     );
   }
 
-  // Widget principal que construye el layout de la maqueta
   Widget _buildPathLayout(BuildContext context, List<ExerciseModel> exercises) {
-    // Simulación de progreso y bloqueo para replicar el diseño
     int completedExercises = 3;
 
     return SingleChildScrollView(
@@ -77,22 +86,19 @@ class LessonDetailScreen extends StatelessWidget {
         children: [
           _buildMainLessonCard(context, level, completedExercises, exercises.length),
           const SizedBox(height: 32),
-          // Construimos las filas de círculos dinámicamente
-          _buildLessonRow(context, exercises, 0, 1, completedExercises), // Fila con 1 ejercicio
+          _buildLessonRow(context, exercises, 0, 1, completedExercises),
           const SizedBox(height: 24),
-          _buildLessonRow(context, exercises, 1, 2, completedExercises), // Fila con 2 ejercicios
+          _buildLessonRow(context, exercises, 1, 2, completedExercises),
           const SizedBox(height: 24),
-          _buildLessonRow(context, exercises, 3, 1, completedExercises), // Fila con 1 ejercicio
+          _buildLessonRow(context, exercises, 3, 1, completedExercises),
           const SizedBox(height: 24),
-          _buildLessonRow(context, exercises, 4, 2, completedExercises), // Fila con 2 ejercicios
+          _buildLessonRow(context, exercises, 4, 2, completedExercises),
         ],
       ),
     );
   }
 
-  // Helper para construir una fila de ejercicios
   Widget _buildLessonRow(BuildContext context, List<ExerciseModel> exercises, int startIndex, int count, int completedCount) {
-    // Asegurarse de no intentar acceder a índices fuera de la lista
     if (startIndex >= exercises.length) {
       return const SizedBox.shrink();
     }
@@ -107,7 +113,6 @@ class LessonDetailScreen extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 16.0),
           child: _LessonCircle(
             exercise: exercisesForThisRow[index],
-            // Desbloqueado si su índice es menor al número de completados
             isLocked: exerciseIndex >= completedCount,
           ),
         );
@@ -115,7 +120,6 @@ class LessonDetailScreen extends StatelessWidget {
     );
   }
 
-  // La tarjeta principal superior
   Widget _buildMainLessonCard(BuildContext context, int level, int completed, int total) {
     return Container(
       width: 160,
@@ -128,7 +132,12 @@ class LessonDetailScreen extends StatelessWidget {
       ),
       child: Column(
         children: [
-          Image.network('https://cdn-icons-png.flaticon.com/512/3209/3209861.png', height: 60),
+          // --- CAMBIO PRINCIPAL: Se reemplaza Image.network por un Icon dinámico ---
+          Icon(
+            _getMainLevelIcon(category),
+            size: 60,
+            color: AppTheme.accentColor.withOpacity(0.8),
+          ),
           const SizedBox(height: 12),
           Text('Lvl $level', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
           const SizedBox(height: 12),
@@ -156,14 +165,12 @@ class _LessonCircle extends StatelessWidget {
     this.isLocked = false,
   });
 
-  // Mapea la subcategoría de la API a un icono visual
   IconData _getIconForSubcategory(String subcategory) {
-    // Puedes expandir esto con más casos
     if (subcategory.contains('afirmaciones')) return Icons.edit_outlined;
     if (subcategory.contains('preguntas')) return Icons.help_outline;
     if (subcategory.contains('rr')) return Icons.book_outlined;
     if (subcategory.contains('pl')) return Icons.directions_bike_outlined;
-    return Icons.record_voice_over; // Icono por defecto
+    return Icons.record_voice_over;
   }
 
   @override
@@ -173,8 +180,6 @@ class _LessonCircle extends StatelessWidget {
 
     return InkWell(
       onTap: isLocked ? null : () {
-        // La navegación a ExerciseScreen ahora debe ser actualizada para pasar
-        // el objeto ExerciseModel completo
         Navigator.of(context).push(MaterialPageRoute(builder: (_) => ExerciseScreen(exercise: exercise)));
       },
       borderRadius: BorderRadius.circular(50),
@@ -209,9 +214,8 @@ class _LessonCircle extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-          // El texto ahora es el 'text_content' del ejercicio
           SizedBox(
-            width: 90, // Ancho fijo para que el texto se ajuste
+            width: 90,
             child: Text(
               exercise.textContent,
               textAlign: TextAlign.center,

@@ -3,8 +3,8 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 // --- IMPORTANTE: CAMBIA ESTAS IPs POR LA IP DE TU MÁQUINA ---
 const String _authBaseUrl = 'http://192.168.1.68:3001/api/v1';
-const String _exercisesBaseUrl = 'https://88f82782f980.ngrok-free.app/api/v1';
-const String _validationBaseUrl = 'https://88f82782f980.ngrok-free.app/api/v1';
+const String _exercisesBaseUrl = 'http://192.168.1.68:8001/api/v1';
+const String _validationBaseUrl = 'http://192.168.1.68:8001/api/v1';
 
 class DioClient {
 // LÍNEA CORREGIDA

@@ -25,6 +25,8 @@ class ExerciseScreen extends StatelessWidget {
   }
 
   Widget _buildExerciseContent(BuildContext context) {
+    const instructionText = 'Escucha y repite la siguiente palabra';
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
       child: Column(
@@ -33,32 +35,56 @@ class ExerciseScreen extends StatelessWidget {
           // Sección Superior: Instrucciones y botón de play
           Column(
             children: [
-              Text(
-                'Escucha y repite la siguiente palabra',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontSize: 22),
-                textAlign: TextAlign.center,
+              // --- SECCIÓN DE INSTRUCCIONES ACTUALIZADA ---
+              BlocBuilder<ExerciseBloc, ExerciseState>(
+                builder: (context, state) {
+                  final bool isSpeaking = (state is ExerciseReadyState) ? state.isInstructionSpeaking : false;
+                  return Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Flexible(
+                        child: Text(
+                          instructionText,
+                          style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontSize: 22),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      IconButton(
+                        icon: Icon(
+                          Icons.volume_up_rounded,
+                          color: isSpeaking ? AppTheme.primaryColor : Colors.grey,
+                        ),
+                        // Deshabilitamos el botón mientras está hablando
+                        onPressed: isSpeaking ? null : () {
+                          context.read<ExerciseBloc>().add(const PlayInstructionRequested(instructionText));
+                        },
+                      ),
+                    ],
+                  );
+                },
               ),
               const SizedBox(height: 40),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  const CircleAvatar(
-                    radius: 50,
-                    backgroundImage: NetworkImage('https://i.pravatar.cc/150?img=12'),
-                  ),
-                  BlocBuilder<ExerciseBloc, ExerciseState>(
-                    builder: (context, state) {
-                      if (state is AudioPlaying) {
-                        return _buildAudioPlayingIndicator(context, state.exercise);
-                      }
-                      return AnimatedPlayButton(
-                        text: exercise.textContent,
-                        onPressed: () {
-                          context.read<ExerciseBloc>().add(PlayAudioRequested());
-                        },
-                      );
-                    },
+
+                  const SizedBox(width: 16),
+                  Flexible(
+                    child: BlocBuilder<ExerciseBloc, ExerciseState>(
+                      builder: (context, state) {
+                        if (state is AudioPlaying) {
+                          return _buildAudioPlayingIndicator(context, state.exercise);
+                        }
+                        return AnimatedPlayButton(
+                          text: exercise.textContent,
+                          onPressed: () {
+                            context.read<ExerciseBloc>().add(PlayAudioRequested());
+                          },
+                        );
+                      },
+                    ),
                   )
                 ],
               ),
@@ -67,9 +93,9 @@ class ExerciseScreen extends StatelessWidget {
           // Sección Media: Botón de grabar y feedback
           Column(
             children: [
-              _buildRecorderButton(context), // CORREGIDO: Pasamos context
+              _buildRecorderButton(context),
               const SizedBox(height: 20),
-              _buildFeedbackSection(context), // CORREGIDO: Pasamos context
+              _buildFeedbackSection(context),
             ],
           ),
           // Sección Inferior: Botón de continuar
@@ -112,9 +138,11 @@ class ExerciseScreen extends StatelessWidget {
             children: [
               Icon(Icons.hearing, color: AppTheme.greenAccent, size: 20),
               const SizedBox(width: 8),
-              Text(
-                exercise.textContent,
-                style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Colors.grey[800], letterSpacing: 1.2),
+              Flexible(
+                child: Text(
+                  exercise.textContent,
+                  style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Colors.grey[800], letterSpacing: 1.2),
+                ),
               ),
             ],
           ),
@@ -178,37 +206,40 @@ class ExerciseScreen extends StatelessWidget {
         if (state is RecordingComplete) {
           return _buildUserAudioPlayer(context, state);
         }
-        return const SizedBox(height: 74); // Espacio reservado para que el layout no salte
+        return const SizedBox(height: 74);
       },
     );
   }
 
   Widget _buildValidationResultCard(BuildContext context, AudioValidationResult? result, {String? error}) {
-    final bool isValid = result?.isValid ?? false;
-    final icon = error != null ? Icons.error_outline : (isValid ? Icons.check_circle : Icons.cancel);
-    final color = error != null ? Colors.orange : (isValid ? Colors.green : Colors.red);
-    final title = error ?? (isValid ? '¡Buen trabajo!' : 'Inténtalo de nuevo');
-    final recommendation = error ?? result?.recommendation;
+    final bool isError = error != null;
+    final bool isValid = !isError && (result?.isValid ?? false);
+    final Color cardColor = isError ? Colors.orange.withOpacity(0.1) : (isValid ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1));
+    final Color borderColor = isError ? Colors.orange.withOpacity(0.5) : (isValid ? Colors.green.withOpacity(0.5) : Colors.red.withOpacity(0.5));
+    final Color textColor = isError ? Colors.orange[800]! : (isValid ? Colors.green[800]! : Colors.red[800]!);
+    final IconData iconData = isError ? Icons.warning_amber_rounded : (isValid ? Icons.check_circle : Icons.cancel);
+    final String title = isError ? "Error de Validación" : (isValid ? '¡Buen trabajo!' : 'Inténtalo de nuevo');
+    final String recommendation = error ?? result?.recommendation ?? "Hubo un problema al procesar la respuesta.";
 
     return Container(
       margin: const EdgeInsets.only(top: 8),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: cardColor,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withOpacity(0.5)),
+        border: Border.all(color: borderColor),
       ),
       child: Row(
         children: [
-          Icon(icon, color: color, size: 40),
+          Icon(iconData, color: textColor, size: 40),
           const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: color)),
+                Text(title, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: textColor)),
                 const SizedBox(height: 4),
-                Text(recommendation ?? '', style: TextStyle(color: Colors.grey[700])),
+                Text(recommendation, style: TextStyle(color: Colors.grey[700])),
               ],
             ),
           )
@@ -279,7 +310,7 @@ class ExerciseScreen extends StatelessWidget {
   }
 }
 
-// --- WIDGETS DE ANIMACIÓN Y APPBAR (SIN CAMBIOS) ---
+// --- WIDGETS DE ANIMACIÓN Y APPBAR ---
 
 class AnimatedPlayButton extends StatefulWidget {
   final String text;
@@ -330,7 +361,20 @@ class _AnimatedPlayButtonState extends State<AnimatedPlayButton> with SingleTick
                 child: const Icon(Icons.play_arrow, color: Colors.white, size: 32),
               ),
               const SizedBox(width: 12),
-              Text(widget.text, style: const TextStyle(fontSize: 24, color: Colors.white, fontWeight: FontWeight.bold, letterSpacing: 1.1)),
+              // --- AQUÍ ESTÁ LA CORRECCIÓN CLAVE ---
+              // Se han eliminado las propiedades 'overflow', 'maxLines' y 'softWrap'
+              // para permitir que el texto se ajuste en múltiples líneas si es necesario.
+              Flexible(
+                child: Text(
+                  widget.text,
+                  style: const TextStyle(
+                    fontSize: 24,
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1.1,
+                  ),
+                ),
+              ),
             ],
           ),
         ),
