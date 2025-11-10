@@ -6,7 +6,9 @@ abstract class LessonDetailEvent extends Equatable {
   List<Object> get props => [];
 }
 
-class FetchLessonsForCategory extends LessonDetailEvent {
-  final String categoryId;
-  const FetchLessonsForCategory(this.categoryId);
+// Evento renombrado para mayor claridad
+class FetchExercisesForLevel extends LessonDetailEvent {
+  final String category;
+  final int level;
+  const FetchExercisesForLevel({required this.category, required this.level});
 }

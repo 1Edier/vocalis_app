@@ -9,8 +9,9 @@ abstract class LessonDetailState extends Equatable {
 class LessonDetailInitial extends LessonDetailState {}
 class LessonDetailLoading extends LessonDetailState {}
 class LessonDetailLoadSuccess extends LessonDetailState {
-  final List<Lesson> lessons;
-  const LessonDetailLoadSuccess(this.lessons);
+  // Ahora contiene una lista del nuevo modelo
+  final List<ExerciseModel> exercises;
+  const LessonDetailLoadSuccess(this.exercises);
 }
 class LessonDetailLoadFailure extends LessonDetailState {
   final String error;

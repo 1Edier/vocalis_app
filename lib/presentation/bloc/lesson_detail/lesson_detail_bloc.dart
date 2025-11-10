@@ -1,30 +1,33 @@
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
-import '../../../data/models/lesson_model.dart';
-import '../../../data/repositories/lesson_repository.dart'; // <-- CORREGIDO A RUTA RELATIVA
+import '../../../data/models/exercise_model.dart'; // <<< CAMBIO: Usamos el nuevo modelo
+import '../../../data/repositories/exercise_repository.dart'; // <<< CAMBIO: Usamos el nuevo repositorio
 
 part 'lesson_detail_event.dart';
 part 'lesson_detail_state.dart';
 
 class LessonDetailBloc extends Bloc<LessonDetailEvent, LessonDetailState> {
-  final LessonRepository _lessonRepository;
+  final ExerciseRepository _exerciseRepository;
 
-  LessonDetailBloc({required LessonRepository lessonRepository})
-      : _lessonRepository = lessonRepository,
+  LessonDetailBloc({required ExerciseRepository exerciseRepository})
+      : _exerciseRepository = exerciseRepository,
         super(LessonDetailInitial()) {
-    on<FetchLessonsForCategory>(_onFetchLessons);
+    on<FetchExercisesForLevel>(_onFetchExercises);
   }
 
-  Future<void> _onFetchLessons(
-      FetchLessonsForCategory event,
+  Future<void> _onFetchExercises(
+      FetchExercisesForLevel event,
       Emitter<LessonDetailState> emit,
       ) async {
     emit(LessonDetailLoading());
     try {
-      final lessons = await _lessonRepository.getLessonsForCategory(event.categoryId);
-      emit(LessonDetailLoadSuccess(lessons));
-    } catch (_) {
-      emit(const LessonDetailLoadFailure('No se pudieron cargar las lecciones.'));
+      final exercises = await _exerciseRepository.getExercises(
+        category: event.category,
+        difficultyLevel: event.level,
+      );
+      emit(LessonDetailLoadSuccess(exercises));
+    } catch (e) {
+      emit(LessonDetailLoadFailure(e.toString()));
     }
   }
 }

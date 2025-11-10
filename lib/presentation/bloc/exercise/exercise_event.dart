@@ -6,12 +6,19 @@ abstract class ExerciseEvent extends Equatable {
   List<Object> get props => [];
 }
 
-class FetchExercise extends ExerciseEvent {
-  final String lessonId;
-  const FetchExercise(this.lessonId);
+class InitializeExercise extends ExerciseEvent {
+  final ExerciseModel exercise;
+  const InitializeExercise(this.exercise);
 }
 
 class PlayAudioRequested extends ExerciseEvent {}
 class StartRecordingRequested extends ExerciseEvent {}
 class StopRecordingRequested extends ExerciseEvent {}
-class SubmitAnswer extends ExerciseEvent {}
+
+// --- NUEVOS EVENTOS ---
+class PlayUserAudioRequested extends ExerciseEvent {}
+class StopUserAudioRequested extends ExerciseEvent {}
+class ValidateRecordingRequested extends ExerciseEvent {
+  final String filePath;
+  const ValidateRecordingRequested(this.filePath);
+}

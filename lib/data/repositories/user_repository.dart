@@ -1,23 +1,12 @@
-import 'package:vocalis/data/models/user_model.dart';
+// Este repositorio se utilizará en el futuro para funcionalidades relacionadas
+// con el usuario que no sean la autenticación inicial, como por ejemplo:
+// - Actualizar los datos del perfil de un usuario.
+// - Obtener una lista de usuarios para una tabla de clasificación.
+// - Eliminar la cuenta de un usuario.
+
+// Por ahora, el AuthRepository se encarga de obtener el perfil del usuario
+// después del login, por lo que este archivo no necesita contener métodos.
 
 class UserRepository {
-  Future<UserModel> getUserProfile(String userId) async {
-    await Future.delayed(const Duration(milliseconds: 300));
-    return const UserModel(
-      id: 'user_01',
-      name: 'Nombre',
-      lastname: 'Apellido',
-      username: 'flutterdev',
-    );
-  }
-
-  Future<UserStats> getUserStats(String userId) async {
-    await Future.delayed(const Duration(milliseconds: 400));
-    return const UserStats(
-      dayStreak: 3,
-      totalXp: 1432,
-      currentLeague: 'Bronze',
-      top3Finishes: 0,
-    );
-  }
+  // Actualmente vacío, listo para futuras implementaciones.
 }

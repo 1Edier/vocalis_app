@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:vocalis/data/models/user_model.dart';
-import 'package:vocalis/data/repositories/user_repository.dart';
-import 'package:vocalis/presentation/bloc/profile/profile_bloc.dart';
-import 'package:vocalis/presentation/widgets/stat_card.dart';
+import '../../../data/models/user_model.dart';
+import '../../../data/repositories/auth_repository.dart'; // <<< CAMBIO
+import '../../bloc/auth/auth_bloc.dart';
+import '../../bloc/profile/profile_bloc.dart';
 
 class ProfileScreen extends StatelessWidget {
   final UserModel user;
@@ -13,31 +13,58 @@ class ProfileScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (context) => ProfileBloc(
-        userRepository: RepositoryProvider.of<UserRepository>(context),
-      )..add(FetchProfileData(user.id)),
+        // Le pasamos el AuthRepository que ya está disponible
+        authRepository: RepositoryProvider.of<AuthRepository>(context),
+      ),
       child: Scaffold(
         backgroundColor: Theme.of(context).colorScheme.background,
-        appBar: AppBar(title: const Text('Perfil')),
-        body: BlocBuilder<ProfileBloc, ProfileState>(
-          builder: (context, state) {
-            if (state is ProfileLoading) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            if (state is ProfileLoadSuccess) {
-              return ListView(
-                padding: const EdgeInsets.all(16.0),
-                children: [
-                  _buildProfileHeader(context, state.user),
-                  const SizedBox(height: 24),
-                  _buildStatsSection(context, state.stats),
-                ],
-              );
-            }
-            if (state is ProfileLoadFailure) {
-              return Center(child: Text(state.error));
-            }
-            return const SizedBox.shrink();
-          },
+        appBar: AppBar(
+          title: const Text('Perfil'),
+          actions: [
+            IconButton(
+              tooltip: 'Cerrar Sesión',
+              icon: const Icon(Icons.logout),
+              onPressed: () {
+                showDialog(
+                  context: context,
+                  builder: (dialogContext) => AlertDialog(
+                    title: const Text('Cerrar Sesión'),
+                    content: const Text('¿Estás seguro de que quieres cerrar sesión?'),
+                    actions: [
+                      TextButton(
+                        child: const Text('Cancelar'),
+                        onPressed: () => Navigator.of(dialogContext).pop(),
+                      ),
+                      TextButton(
+                        child: const Text('Aceptar'),
+                        onPressed: () {
+                          Navigator.of(dialogContext).pop();
+                          context.read<AuthBloc>().add(LogoutRequested());
+                        },
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
+        body: ListView(
+          padding: const EdgeInsets.all(16.0),
+          children: [
+            // Ya no necesitamos un BlocBuilder aquí, podemos mostrar los datos directamente
+            _buildProfileHeader(context, user),
+            const SizedBox(height: 24),
+            // <<< LA SECCIÓN DE ESTADÍSTICAS HA SIDO ELIMINADA >>>
+            const Divider(),
+            const SizedBox(height: 16),
+            const Center(
+              child: Text(
+                'Más funcionalidades próximamente.',
+                style: TextStyle(color: Colors.grey),
+              ),
+            )
+          ],
         ),
       ),
     );
@@ -46,6 +73,20 @@ class ProfileScreen extends StatelessWidget {
   Widget _buildProfileHeader(BuildContext context, UserModel user) {
     return Row(
       children: [
+        CircleAvatar(
+          radius: 40,
+          backgroundColor: const Color(0xffc50000),
+          backgroundImage: user.avatarUrl != null && user.avatarUrl!.isNotEmpty
+              ? NetworkImage(user.avatarUrl!)
+              : null,
+          child: user.avatarUrl == null || user.avatarUrl!.isEmpty
+              ? Text(
+            user.fullName.isNotEmpty ? user.fullName[0].toUpperCase() : '?',
+            style: const TextStyle(fontSize: 32, color: Colors.white),
+          )
+              : null,
+        ),
+        const SizedBox(width: 16),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -53,71 +94,16 @@ class ProfileScreen extends StatelessWidget {
               Text(
                 user.fullName,
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontSize: 28),
+                overflow: TextOverflow.ellipsis,
               ),
               const SizedBox(height: 4),
-              Row(
-                children: [
-                  Text(
-                    user.username,
-                    style: Theme.of(context).textTheme.labelLarge?.copyWith(fontSize: 16),
-                  ),
-                  const SizedBox(width: 8),
-                  Icon(Icons.verified_user, color: Colors.green[400], size: 18),
-                ],
+              Text(
+                user.email,
+                style: Theme.of(context).textTheme.labelLarge?.copyWith(fontSize: 16),
+                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),
-        ),
-        const CircleAvatar(
-          radius: 40,
-          backgroundColor: Color(0xffc50000),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildStatsSection(BuildContext context, UserStats stats) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Estadísticas',
-          style: Theme.of(context).textTheme.headlineSmall,
-        ),
-        const SizedBox(height: 16),
-        GridView.count(
-          crossAxisCount: 2,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          crossAxisSpacing: 16,
-          mainAxisSpacing: 16,
-          childAspectRatio: 2.2,
-          children: [
-            StatCard(
-              icon: Icons.local_fire_department_rounded,
-              value: stats.dayStreak.toString(),
-              label: 'Day Streak',
-              iconColor: Colors.orange,
-            ),
-            StatCard(
-              icon: Icons.flash_on_rounded,
-              value: stats.totalXp.toString(),
-              label: 'Total XP',
-              iconColor: Colors.amber,
-            ),
-            StatCard(
-              icon: Icons.shield_rounded,
-              value: stats.currentLeague,
-              label: 'Current League',
-              iconColor: const Color(0xffcd7f32), // Bronze color
-            ),
-            StatCard(
-              icon: Icons.military_tech_rounded,
-              value: stats.top3Finishes.toString(),
-              label: 'Top 3 Finishes',
-              iconColor: Colors.blueAccent,
-            ),
-          ],
         ),
       ],
     );

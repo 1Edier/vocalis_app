@@ -6,9 +6,5 @@ import 'myapp.dart'; // Mantenemos la importación de myapp.dart
 
 void main() {
   runApp(
-    DevicePreview(
-      enabled: kDebugMode,
-      builder: (context) => const VocalisApp(), // <-- CAMBIO: Renombramos a VocalisApp
-    ),
-  );
+     const VocalisApp());
 }

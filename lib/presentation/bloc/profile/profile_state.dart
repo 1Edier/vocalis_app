@@ -10,8 +10,9 @@ class ProfileInitial extends ProfileState {}
 class ProfileLoading extends ProfileState {}
 class ProfileLoadSuccess extends ProfileState {
   final UserModel user;
-  final UserStats stats;
-  const ProfileLoadSuccess({required this.user, required this.stats});
+  //final UserStats stats;
+  //const ProfileLoadSuccess({required this.user, required this.stats});
+  const ProfileLoadSuccess({required this.user});
 }
 class ProfileLoadFailure extends ProfileState {
   final String error;
