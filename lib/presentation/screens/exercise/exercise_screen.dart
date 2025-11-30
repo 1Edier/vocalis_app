@@ -1,503 +1,374 @@
-import 'dart:math';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:lottie/lottie.dart';
+import 'package:vocalis/data/repositories/progression_repository.dart';
 import '../../../core/theme/app_theme.dart';
-import '../../../data/models/audio_validation_result.dart';
-import '../../../data/models/exercise_model.dart';
+import '../../../data/models/exercise_detail_model.dart';
+import '../../../data/models/process_audio_result.dart';
 import '../../bloc/exercise/exercise_bloc.dart';
 
+// Paleta de colores para el nuevo diseño
+const Color _primaryColor = Color(0xFF6A1B9A);
+const Color _secondaryColor = Color(0xFFF3E5F5);
+const Color _accentColor = Color(0xFF7D5AD8);
+
 class ExerciseScreen extends StatelessWidget {
-  final ExerciseModel exercise;
-  const ExerciseScreen({super.key, required this.exercise});
+  final String exerciseId;
+  const ExerciseScreen({super.key, required this.exerciseId});
 
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (context) => ExerciseBloc()..add(InitializeExercise(exercise)),
-      child: Scaffold(
-        backgroundColor: AppTheme.backgroundColor,
-        appBar: _ExerciseAppBar(phoneme: exercise.category),
-        body: _buildExerciseContent(context),
-        bottomNavigationBar: _buildBottomBar(),
+      create: (context) => ExerciseBloc(
+        progressionRepository: RepositoryProvider.of<ProgressionRepository>(context),
+      )..add(FetchExerciseDetail(exerciseId)),
+      child: BlocBuilder<ExerciseBloc, ExerciseState>(
+        builder: (context, state) {
+          if (state is ExerciseLoading || state is ExerciseInitial) {
+            return Scaffold(
+              backgroundColor: Colors.white,
+              appBar: AppBar(
+                backgroundColor: _primaryColor, elevation: 0,
+                title: const Text('Cargando Ejercicio...', style: TextStyle(color: Colors.white, fontSize: 18)),
+                leading: const BackButton(color: Colors.white),
+              ),
+              body: Center(child: Lottie.asset('assets/lottie/cat_loader.json', width: 200, height: 200, repeat: true)),
+            );
+          }
+          if (state is ExerciseLoadFailure) {
+            return Scaffold(
+              backgroundColor: Colors.white,
+              appBar: AppBar(backgroundColor: _primaryColor, leading: const BackButton(color: Colors.white)),
+              body: const Center(child: Text("Error al cargar el ejercicio.")),
+            );
+          }
+
+          final exercise = (state as ExerciseReadyState).exercise;
+          return Scaffold(
+            backgroundColor: Colors.white,
+            appBar: _ExerciseAppBar(level: exercise.orderIndex, title: exercise.title),
+            body: _buildExerciseContent(context, state as ExerciseReadyState),
+          );
+        },
       ),
     );
   }
 
-  Widget _buildExerciseContent(BuildContext context) {
-    const instructionText = 'Escucha y repite la siguiente palabra';
+  Widget _buildExerciseContent(BuildContext context, ExerciseReadyState state) {
+    final exercise = state.exercise;
+    final score = (state is ProcessingSuccess) ? state.result.scores.overall : exercise.bestScore;
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24.0),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Sección Superior: Instrucciones y botón de play
-          Column(
-            children: [
-              // --- SECCIÓN DE INSTRUCCIONES ACTUALIZADA ---
-              BlocBuilder<ExerciseBloc, ExerciseState>(
-                builder: (context, state) {
-                  final bool isSpeaking = (state is ExerciseReadyState) ? state.isInstructionSpeaking : false;
-                  return Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Flexible(
-                        child: Text(
-                          instructionText,
-                          style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontSize: 22),
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      IconButton(
-                        icon: Icon(
-                          Icons.volume_up_rounded,
-                          color: isSpeaking ? AppTheme.primaryColor : Colors.grey,
-                        ),
-                        // Deshabilitamos el botón mientras está hablando
-                        onPressed: isSpeaking ? null : () {
-                          context.read<ExerciseBloc>().add(const PlayInstructionRequested(instructionText));
-                        },
-                      ),
-                    ],
-                  );
-                },
-              ),
-              const SizedBox(height: 40),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-
-                  const SizedBox(width: 16),
-                  Flexible(
-                    child: BlocBuilder<ExerciseBloc, ExerciseState>(
-                      builder: (context, state) {
-                        if (state is AudioPlaying) {
-                          return _buildAudioPlayingIndicator(context, state.exercise);
-                        }
-                        return AnimatedPlayButton(
-                          text: exercise.textContent,
-                          onPressed: () {
-                            context.read<ExerciseBloc>().add(PlayAudioRequested());
-                          },
-                        );
-                      },
-                    ),
-                  )
-                ],
-              ),
-            ],
+          const Text('PALABRA', style: TextStyle(color: Colors.grey, letterSpacing: 2, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          Text(exercise.textContent, textAlign: TextAlign.center, style: const TextStyle(fontSize: 48, fontWeight: FontWeight.bold, color: _primaryColor)),
+          const SizedBox(height: 24),
+          LottieAudioPlayer(
+            isPlaying: state is AudioPlaying,
+            onPlay: () => context.read<ExerciseBloc>().add(PlayAudioRequested()),
           ),
-          // Sección Media: Botón de grabar y feedback
-          Column(
-            children: [
-              _buildRecorderButton(context),
-              const SizedBox(height: 20),
-              _buildFeedbackSection(context),
-            ],
-          ),
-          // Sección Inferior: Botón de continuar
-          BlocBuilder<ExerciseBloc, ExerciseState>(
-            builder: (context, state) {
-              final bool isEnabled = state is ValidationSuccess && state.result.isValid;
-              return ElevatedButton(
-                onPressed: isEnabled ? () {} : null,
-                style: ElevatedButton.styleFrom(
-                  minimumSize: const Size(double.infinity, 50),
-                  backgroundColor: isEnabled ? AppTheme.primaryColor : const Color(0xFFE0E0E0),
-                  disabledBackgroundColor: const Color(0xFFE0E0E0),
-                  foregroundColor: Colors.white,
-                  disabledForegroundColor: Colors.grey[500],
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                ),
-                child: const Text('Continuar'),
-              );
-            },
-          ),
+          const SizedBox(height: 32),
+          if (exercise.tips.isNotEmpty) _buildTipsCard(context, exercise.tips),
+          const SizedBox(height: 32),
+          _buildProgressBar(context, score, exercise.unlockScoreRequired),
+          const SizedBox(height: 24),
+          _buildRecorderButton(context, state),
+          const SizedBox(height: 16),
+          _buildFeedbackOrActions(context, state),
         ],
       ),
     );
   }
 
-  Widget _buildAudioPlayingIndicator(BuildContext context, ExerciseModel exercise) {
+  Widget _buildTipsCard(BuildContext context, List<String> tips) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(color: _secondaryColor, borderRadius: BorderRadius.circular(16), border: Border(left: BorderSide(color: _primaryColor.withOpacity(0.5), width: 5))),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(children: [Icon(Icons.lightbulb_outline_rounded, color: Colors.amber, size: 24), SizedBox(width: 8), Text('Consejos', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _primaryColor))]),
+          const SizedBox(height: 12),
+          ...tips.map((tip) => Padding(
+            padding: const EdgeInsets.only(bottom: 8.0, left: 4.0),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('• ', style: TextStyle(color: _primaryColor, fontSize: 16, fontWeight: FontWeight.bold)),
+                Expanded(child: Text(tip, style: const TextStyle(fontSize: 16, color: Colors.black87))),
+              ],
+            ),
+          )),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProgressBar(BuildContext context, double score, int requiredScore) {
     return Column(
       children: [
-        const EnhancedPulseAnimation(color: AppTheme.greenAccent, size: 90),
-        const SizedBox(height: 16),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-          decoration: BoxDecoration(
-            color: AppTheme.greenAccent.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: AppTheme.greenAccent.withOpacity(0.3), width: 2),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.hearing, color: AppTheme.greenAccent, size: 20),
-              const SizedBox(width: 8),
-              Flexible(
-                child: Text(
-                  exercise.textContent,
-                  style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Colors.grey[800], letterSpacing: 1.2),
-                ),
-              ),
-            ],
-          ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text('Progreso para desbloquear', style: TextStyle(color: Colors.grey)),
+            Text('${score.toStringAsFixed(0)} / $requiredScore puntos', style: const TextStyle(fontWeight: FontWeight.bold)),
+          ],
         ),
         const SizedBox(height: 8),
-        Text('Reproduciendo audio...', style: TextStyle(fontSize: 14, color: Colors.grey[600], fontStyle: FontStyle.italic)),
+        LinearProgressIndicator(
+          value: score / requiredScore.toDouble().clamp(1, 100),
+          backgroundColor: Colors.grey[300],
+          color: _primaryColor,
+          minHeight: 8,
+          borderRadius: BorderRadius.circular(4),
+        ),
       ],
     );
   }
 
-  Widget _buildRecorderButton(BuildContext context) {
-    return BlocBuilder<ExerciseBloc, ExerciseState>(
-      builder: (context, state) {
-        String text = 'Toca para grabar';
-        IconData icon = Icons.mic_none;
-        VoidCallback? onPressed = () => context.read<ExerciseBloc>().add(StartRecordingRequested());
+  Widget _buildRecorderButton(BuildContext context, ExerciseReadyState state) {
+    String text = 'Grabar mi pronunciación';
+    IconData icon = Icons.mic_none_rounded;
+    VoidCallback? onPressed = () => context.read<ExerciseBloc>().add(StartRecordingRequested());
 
-        if (state is RecordingInProgress) {
-          text = 'Grabando...';
-          icon = Icons.stop;
-          onPressed = () => context.read<ExerciseBloc>().add(StopRecordingRequested());
-        } else if (state is ValidationSuccess || state is ValidationFailure) {
-          text = '¡Vuelve a grabar!';
-          icon = Icons.refresh;
-          onPressed = () => context.read<ExerciseBloc>().add(StartRecordingRequested());
-        } else if (state is AudioPlaying || state is ValidatingAudio) {
-          onPressed = null;
-        }
+    if (state is RecordingInProgress) {
+      text = 'Grabando...';
+      icon = Icons.stop_rounded;
+      onPressed = () => context.read<ExerciseBloc>().add(StopRecordingRequested());
+    } else if (state is AudioPlaying || state is ProcessingAudio || state is ProcessingSuccess || state is ProcessingFailure) {
+      onPressed = null;
+    }
 
-        return ElevatedButton.icon(
-          onPressed: onPressed,
-          icon: Icon(icon, color: Colors.black87, size: 28),
-          label: Text(text, style: const TextStyle(fontSize: 20, color: Colors.black87)),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppTheme.greenAccent,
-            disabledBackgroundColor: AppTheme.greenAccent.withOpacity(0.7),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            padding: const EdgeInsets.symmetric(vertical: 20),
-            minimumSize: const Size(double.infinity, 60),
-          ),
-        );
-      },
+    return ElevatedButton.icon(
+      onPressed: onPressed,
+      icon: Icon(icon, color: Colors.white, size: 24),
+      label: Text(text, style: const TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold)),
+      style: ElevatedButton.styleFrom(backgroundColor: _primaryColor, disabledBackgroundColor: _primaryColor.withOpacity(0.5), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), padding: const EdgeInsets.symmetric(vertical: 16), minimumSize: const Size(double.infinity, 50)),
     );
   }
 
-  Widget _buildFeedbackSection(BuildContext context) {
-    return BlocBuilder<ExerciseBloc, ExerciseState>(
-      builder: (context, state) {
-        if (state is ValidatingAudio) {
-          return const Padding(
-            padding: EdgeInsets.all(16.0),
-            child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [CircularProgressIndicator(), SizedBox(width: 16), Text("Analizando tu audio...")]),
-          );
-        }
-        if (state is ValidationSuccess) {
-          return _buildValidationResultCard(context, state.result);
-        }
-        if (state is ValidationFailure) {
-          return _buildValidationResultCard(context, null, error: state.error);
-        }
-        if (state is RecordingComplete) {
-          return _buildUserAudioPlayer(context, state);
-        }
-        return const SizedBox(height: 74);
-      },
-    );
-  }
-
-  Widget _buildValidationResultCard(BuildContext context, AudioValidationResult? result, {String? error}) {
-    final bool isError = error != null;
-    final bool isValid = !isError && (result?.isValid ?? false);
-    final Color cardColor = isError ? Colors.orange.withOpacity(0.1) : (isValid ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1));
-    final Color borderColor = isError ? Colors.orange.withOpacity(0.5) : (isValid ? Colors.green.withOpacity(0.5) : Colors.red.withOpacity(0.5));
-    final Color textColor = isError ? Colors.orange[800]! : (isValid ? Colors.green[800]! : Colors.red[800]!);
-    final IconData iconData = isError ? Icons.warning_amber_rounded : (isValid ? Icons.check_circle : Icons.cancel);
-    final String title = isError ? "Error de Validación" : (isValid ? '¡Buen trabajo!' : 'Inténtalo de nuevo');
-    final String recommendation = error ?? result?.recommendation ?? "Hubo un problema al procesar la respuesta.";
-
-    return Container(
-      margin: const EdgeInsets.only(top: 8),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: cardColor,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: borderColor),
-      ),
-      child: Row(
+  Widget _buildFeedbackOrActions(BuildContext context, ExerciseReadyState state) {
+    if (state is ProcessingAudio) {
+      return const Padding(padding: EdgeInsets.symmetric(vertical: 16.0), child: Center(child: CircularProgressIndicator()));
+    }
+    if (state is ProcessingSuccess) {
+      return Column(
         children: [
-          Icon(iconData, color: textColor, size: 40),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: textColor)),
-                const SizedBox(height: 4),
-                Text(recommendation, style: TextStyle(color: Colors.grey[700])),
-              ],
-            ),
-          )
+          _buildProcessingResultCard(context, state.result),
+          const SizedBox(height: 16),
+          _buildActionButtons(context, state),
         ],
-      ),
-    );
-  }
-
-  Widget _buildUserAudioPlayer(BuildContext context, ExerciseReadyState state) {
-    final isPlaying = state.isUserAudioPlaying;
-    return Container(
-      margin: const EdgeInsets.only(top: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.grey[300]!),
-        boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.2), blurRadius: 4, offset: const Offset(0, 2))],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      );
+    }
+    if (state is ProcessingFailure) {
+      return Column(
         children: [
-          const Text("Tu grabación", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-          IconButton(
-            icon: Icon(isPlaying ? Icons.pause_circle_filled : Icons.play_circle_filled, size: 36, color: AppTheme.primaryColor),
-            onPressed: () {
-              if (isPlaying) {
-                context.read<ExerciseBloc>().add(StopUserAudioRequested());
-              } else {
-                context.read<ExerciseBloc>().add(PlayUserAudioRequested());
-              }
-            },
-          ),
+          _buildProcessingResultCard(context, null, error: state.error),
+          const SizedBox(height: 16),
+          _buildActionButtons(context, state),
         ],
-      ),
-    );
+      );
+    }
+    return const SizedBox(height: 52);
   }
 
-  Widget _buildBottomBar() {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(30),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), spreadRadius: 1, blurRadius: 8)],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(30),
-        child: BottomNavigationBar(
-          items: const <BottomNavigationBarItem>[
-            BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-            BottomNavigationBarItem(icon: Icon(Icons.flag), label: 'Metas'),
-            BottomNavigationBarItem(icon: Icon(Icons.people_outline), label: 'Comunidad'),
-            BottomNavigationBarItem(icon: Icon(Icons.settings_outlined), label: 'Ajustes'),
-          ],
-          currentIndex: 1,
-          selectedItemColor: Colors.redAccent,
-          unselectedItemColor: Colors.grey[400],
-          showSelectedLabels: false,
-          showUnselectedLabels: false,
-          type: BottomNavigationBarType.fixed,
-          elevation: 0,
-          backgroundColor: Colors.white,
-          iconSize: 28,
-        ),
-      ),
-    );
-  }
-}
-
-// --- WIDGETS DE ANIMACIÓN Y APPBAR ---
-
-class AnimatedPlayButton extends StatefulWidget {
-  final String text;
-  final VoidCallback onPressed;
-  const AnimatedPlayButton({super.key, required this.text, required this.onPressed});
-  @override
-  State<AnimatedPlayButton> createState() => _AnimatedPlayButtonState();
-}
-
-class _AnimatedPlayButtonState extends State<AnimatedPlayButton> with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _scaleAnimation;
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 200));
-    _scaleAnimation = Tween<double>(begin: 1.0, end: 1.05).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
-  }
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTapDown: (_) => _controller.forward(),
-      onTapUp: (_) {
-        _controller.reverse();
-        widget.onPressed();
-      },
-      onTapCancel: () => _controller.reverse(),
-      child: ScaleTransition(
-        scale: _scaleAnimation,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(colors: [AppTheme.greenAccent, AppTheme.greenAccent.withOpacity(0.8)], begin: Alignment.topLeft, end: Alignment.bottomRight),
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [BoxShadow(color: AppTheme.greenAccent.withOpacity(0.4), blurRadius: 12, spreadRadius: 2, offset: const Offset(0, 4))],
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), shape: BoxShape.circle),
-                child: const Icon(Icons.play_arrow, color: Colors.white, size: 32),
-              ),
-              const SizedBox(width: 12),
-              // --- AQUÍ ESTÁ LA CORRECCIÓN CLAVE ---
-              // Se han eliminado las propiedades 'overflow', 'maxLines' y 'softWrap'
-              // para permitir que el texto se ajuste en múltiples líneas si es necesario.
-              Flexible(
-                child: Text(
-                  widget.text,
-                  style: const TextStyle(
-                    fontSize: 24,
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 1.1,
-                  ),
-                ),
-              ),
-            ],
+  Widget _buildActionButtons(BuildContext context, ExerciseReadyState state) {
+    return Row(
+      children: [
+        Expanded(
+          child: OutlinedButton(
+            onPressed: () => context.read<ExerciseBloc>().add(StartRecordingRequested()),
+            child: const Text('Reintentar'),
+            style: OutlinedButton.styleFrom(foregroundColor: _primaryColor, side: const BorderSide(color: _primaryColor), padding: const EdgeInsets.symmetric(vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
           ),
         ),
-      ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: ElevatedButton(
+            onPressed: () => Navigator.of(context).pop((state is ProcessingSuccess) && state.result.isCompleted),
+            child: const Text('Continuar'),
+            style: ElevatedButton.styleFrom(backgroundColor: _primaryColor, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+          ),
+        ),
+      ],
     );
   }
-}
 
-class EnhancedPulseAnimation extends StatefulWidget {
-  final Color color;
-  final double size;
-  const EnhancedPulseAnimation({super.key, this.color = Colors.green, this.size = 60});
-  @override
-  State<EnhancedPulseAnimation> createState() => _EnhancedPulseAnimationState();
-}
+  Widget _buildProcessingResultCard(BuildContext context, ProcessAudioResult? result, {String? error}) {
+    // Caso de Error
+    if (error != null) {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(color: Colors.red.withOpacity(0.1), borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.red.withOpacity(0.5))),
+        child: Column(children: [
+          const Text('Hubo un Problema', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.red)),
+          const SizedBox(height: 16),
+          Text(error.replaceFirst("Exception: ", ""), textAlign: TextAlign.center, style: TextStyle(fontSize: 15, color: Colors.grey[800])),
+        ]),
+      );
+    }
 
-class _EnhancedPulseAnimationState extends State<EnhancedPulseAnimation> with TickerProviderStateMixin {
-  late AnimationController _pulseController;
-  late AnimationController _rotationController;
-  late Animation<double> _pulseAnimation;
-  late Animation<double> _rotationAnimation;
-  @override
-  void initState() {
-    super.initState();
-    _pulseController = AnimationController(vsync: this, duration: const Duration(milliseconds: 1500))..repeat();
-    _pulseAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(CurvedAnimation(parent: _pulseController, curve: Curves.easeOut));
-    _rotationController = AnimationController(vsync: this, duration: const Duration(milliseconds: 2000))..repeat(reverse: true);
-    _rotationAnimation = Tween<double>(begin: -0.05, end: 0.05).animate(CurvedAnimation(parent: _rotationController, curve: Curves.easeInOut));
-  }
-  @override
-  void dispose() {
-    _pulseController.dispose();
-    _rotationController.dispose();
-    super.dispose();
-  }
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: Listenable.merge([_pulseController, _rotationController]),
-      builder: (context, child) {
-        return Stack(
-          alignment: Alignment.center,
+    // Caso de Éxito
+    if (result != null) {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.grey[300]!), boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, 4))]),
+        child: Column(
           children: [
-            _buildPulseWave(scale: 1.0 + (_pulseAnimation.value * 1.2), opacity: (1.0 - _pulseAnimation.value) * 0.6, width: 4),
-            if (_pulseAnimation.value > 0.2)
-              _buildPulseWave(scale: 1.0 + ((_pulseAnimation.value - 0.2) * 1.0), opacity: (1.0 - (_pulseAnimation.value - 0.2) * 1.25) * 0.7, width: 3),
-            if (_pulseAnimation.value > 0.4)
-              _buildPulseWave(scale: 1.0 + ((_pulseAnimation.value - 0.4) * 0.8), opacity: (1.0 - (_pulseAnimation.value - 0.4) * 1.66) * 0.8, width: 2),
-            Container(
-              width: widget.size,
-              height: widget.size,
-              decoration: BoxDecoration(
-                gradient: RadialGradient(colors: [widget.color.withOpacity(0.9), widget.color]),
-                shape: BoxShape.circle,
-                boxShadow: [BoxShadow(color: widget.color.withOpacity(0.5), blurRadius: 20, spreadRadius: 5)],
-              ),
+            Text(result.feedback.mainMessage, style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontSize: 20, color: AppTheme.primaryColor), textAlign: TextAlign.center),
+            const SizedBox(height: 16),
+            Text('${result.scores.overall.toStringAsFixed(0)}', style: const TextStyle(fontSize: 48, fontWeight: FontWeight.bold, color: Colors.black87)),
+            Text('Puntuación General', style: TextStyle(color: Colors.grey[600])),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: List.generate(3, (index) => Icon(index < result.stars ? Icons.star_rounded : Icons.star_border_rounded, color: Colors.amber, size: 40)),
             ),
-            Transform.rotate(angle: _rotationAnimation.value, child: Icon(Icons.volume_up_rounded, color: Colors.white, size: widget.size * 0.5)),
-            ..._buildFloatingParticles(),
+            if (result.feedback.strengths.isNotEmpty || result.feedback.areasToImprove.isNotEmpty)
+              const Divider(height: 32, thickness: 1, indent: 20, endIndent: 20),
+            if (result.feedback.strengths.isNotEmpty)
+              _FeedbackSectionWidget(title: 'Puntos Fuertes', items: result.feedback.strengths, icon: Icons.check_circle, color: Colors.green),
+            if (result.feedback.areasToImprove.isNotEmpty)
+              _FeedbackSectionWidget(title: 'Áreas a Mejorar', items: result.feedback.areasToImprove, icon: Icons.lightbulb, color: Colors.orange),
           ],
-        );
-      },
-    );
-  }
-  Widget _buildPulseWave({required double scale, required double opacity, required double width}) {
-    return Transform.scale(
-      scale: scale,
-      child: Container(
-        width: widget.size,
-        height: widget.size,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          border: Border.all(color: widget.color.withOpacity(opacity.clamp(0.0, 1.0)), width: width),
-        ),
-      ),
-    );
-  }
-  List<Widget> _buildFloatingParticles() {
-    return List.generate(3, (index) {
-      final angle = (index * 120.0) * (pi / 180.0);
-      final distance = widget.size * 0.7 * _pulseAnimation.value;
-      final x = distance * cos(angle);
-      final y = distance * sin(angle);
-      return Transform.translate(
-        offset: Offset(x, y),
-        child: Opacity(
-          opacity: (1.0 - _pulseAnimation.value).clamp(0.0, 1.0),
-          child: Container(
-            width: 6,
-            height: 6,
-            decoration: BoxDecoration(
-              color: widget.color,
-              shape: BoxShape.circle,
-              boxShadow: [BoxShadow(color: widget.color.withOpacity(0.5), blurRadius: 4, spreadRadius: 1)],
-            ),
-          ),
         ),
       );
-    });
+    }
+    return const SizedBox.shrink();
+  }
+}
+
+class _FeedbackSectionWidget extends StatelessWidget {
+  final String title;
+  final List<String> items;
+  final IconData icon;
+  final Color color;
+
+  const _FeedbackSectionWidget({required this.title, required this.items, required this.icon, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          ...items.map((item) => Padding(
+            padding: const EdgeInsets.only(bottom: 4.0),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(icon, color: color, size: 20),
+                const SizedBox(width: 8),
+                Expanded(child: Text(item, style: TextStyle(color: Colors.grey[800]))),
+              ],
+            ),
+          )),
+        ],
+      ),
+    );
   }
 }
 
 class _ExerciseAppBar extends StatelessWidget implements PreferredSizeWidget {
-  final String phoneme;
-  const _ExerciseAppBar({required this.phoneme});
+  final int level;
+  final String title;
+  const _ExerciseAppBar({required this.level, required this.title});
+
   @override
   Widget build(BuildContext context) {
     return AppBar(
-      automaticallyImplyLeading: true,
-      centerTitle: false,
-      title: Text('Fonema "$phoneme"', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontSize: 20)),
-      actions: [
-        Icon(Icons.workspace_premium_rounded, color: Colors.orange[600], size: 20),
-        const SizedBox(width: 4),
-        Text('18', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey[800], fontSize: 16)),
-        const SizedBox(width: 16),
-        const Icon(Icons.diamond_outlined, color: Colors.cyan, size: 20),
-        const SizedBox(width: 4),
-        Text('213', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey[800], fontSize: 16)),
-        const SizedBox(width: 16),
-      ],
+      backgroundColor: _primaryColor,
+      elevation: 4,
+      shadowColor: Colors.black.withOpacity(0.3),
+      centerTitle: true,
+      leading: IconButton(icon: const Icon(Icons.arrow_back, color: Colors.white), onPressed: () => Navigator.of(context).pop(false)),
+      title: Column(
+        children: [
+          Text('NIVEL $level', style: const TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.5)),
+          const SizedBox(height: 4),
+          Text(title, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+        ],
+      ),
     );
   }
   @override
-  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
+  Size get preferredSize => const Size.fromHeight(kToolbarHeight + 10);
+}
+
+class LottieAudioPlayer extends StatefulWidget {
+  final bool isPlaying;
+  final VoidCallback onPlay;
+  const LottieAudioPlayer({super.key, required this.isPlaying, required this.onPlay});
+  @override
+  State<LottieAudioPlayer> createState() => _LottieAudioPlayerState();
+}
+
+class _LottieAudioPlayerState extends State<LottieAudioPlayer> with SingleTickerProviderStateMixin {
+  late final AnimationController _lottieController;
+  @override
+  void initState() {
+    super.initState();
+    _lottieController = AnimationController(vsync: this);
+    _lottieController.addStatusListener((status) {
+      if (status == AnimationStatus.completed) {
+        _lottieController.reset();
+        _lottieController.forward();
+      }
+    });
+  }
+  @override
+  void didUpdateWidget(covariant LottieAudioPlayer oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isPlaying != oldWidget.isPlaying) {
+      if (widget.isPlaying) {
+        _lottieController.repeat();
+      } else {
+        _lottieController.stop();
+        _lottieController.reset();
+      }
+    }
+  }
+  @override
+  void dispose() {
+    _lottieController.dispose();
+    super.dispose();
+  }
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 120,
+      height: 120,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Lottie.asset(
+            'assets/lottie/audio_wave.json',
+            controller: _lottieController,
+            width: 120,
+            height: 120,
+            onLoaded: (composition) {
+              _lottieController.duration = composition.duration;
+            },
+          ),
+          if (!widget.isPlaying)
+            IconButton(
+              iconSize: 72,
+              icon: Container(
+                width: 72, height: 72,
+                decoration: const BoxDecoration(shape: BoxShape.circle, color: _accentColor, boxShadow: [BoxShadow(color: _accentColor, blurRadius: 10, spreadRadius: -5)]),
+                child: const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 48),
+              ),
+              onPressed: widget.onPlay,
+            ),
+        ],
+      ),
+    );
+  }
 }

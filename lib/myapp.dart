@@ -7,45 +7,40 @@ import 'core/theme/app_theme.dart';
 import 'data/repositories/auth_repository.dart';
 import 'data/repositories/lesson_repository.dart';
 import 'data/repositories/user_repository.dart';
+import 'data/repositories/exercise_repository.dart';
+import 'data/repositories/progression_repository.dart';
 import 'presentation/bloc/auth/auth_bloc.dart';
-import 'presentation/screens/splash_screen.dart'; // Importamos la SplashScreen
+import 'presentation/screens/splash_screen.dart';
 
-// El nombre de la clase principal de la app, como en tu `main.dart`
 class VocalisApp extends StatelessWidget {
   const VocalisApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // 1. Proveemos los Repositorios a toda la aplicación
     return MultiRepositoryProvider(
       providers: [
         RepositoryProvider(create: (context) => AuthRepository()),
         RepositoryProvider(create: (context) => LessonRepository()),
         RepositoryProvider(create: (context) => UserRepository()),
+        RepositoryProvider(create: (context) => ExerciseRepository()),
+        RepositoryProvider(create: (context) => ProgressionRepository()),
       ],
-      // 2. Proveemos los BLoCs que sean necesarios globalmente
       child: MultiBlocProvider(
         providers: [
           BlocProvider(
             create: (context) => AuthBloc(
               authRepository: RepositoryProvider.of<AuthRepository>(context),
-            )..add(AppStarted()), // Disparamos el evento para verificar la sesión al iniciar
+              // Inyectamos ambos repositorios al AuthBloc
+              progressionRepository: RepositoryProvider.of<ProgressionRepository>(context),
+            )..add(AppStarted()),
           ),
         ],
-        // 3. Construimos el MaterialApp con la configuración de DevicePreview
         child: MaterialApp(
-          // --- CONFIGURACIÓN DE DEVICEREVIEW ---
           locale: DevicePreview.locale(context),
           builder: DevicePreview.appBuilder,
-          // ------------------------------------
-
-          // --- CONFIGURACIÓN DE VOCALIS ---
           title: 'Vocalis',
           theme: AppTheme.lightTheme,
           debugShowCheckedModeBanner: false,
-
-          // --- PUNTO DE ENTRADA DE LA APP ---
-          // La SplashScreen decidirá a dónde navegar
           home: const SplashScreen(),
         ),
       ),

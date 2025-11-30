@@ -6,22 +6,24 @@ abstract class ExerciseEvent extends Equatable {
   List<Object> get props => [];
 }
 
-class InitializeExercise extends ExerciseEvent {
-  final ExerciseModel exercise;
-  const InitializeExercise(this.exercise);
+class FetchExerciseDetail extends ExerciseEvent {
+  final String exerciseId;
+  const FetchExerciseDetail(this.exerciseId);
 }
 
 class PlayAudioRequested extends ExerciseEvent {}
 class StartRecordingRequested extends ExerciseEvent {}
 class StopRecordingRequested extends ExerciseEvent {}
 
-// --- NUEVOS EVENTOS ---
+// Renombrado de 'Validate' a 'Process'
+class ProcessRecordingRequested extends ExerciseEvent {
+  final String filePath;
+  const ProcessRecordingRequested(this.filePath);
+}
+
 class PlayUserAudioRequested extends ExerciseEvent {}
 class StopUserAudioRequested extends ExerciseEvent {}
-class ValidateRecordingRequested extends ExerciseEvent {
-  final String filePath;
-  const ValidateRecordingRequested(this.filePath);
-}
+
 class PlayInstructionRequested extends ExerciseEvent {
   final String textToSpeak;
   const PlayInstructionRequested(this.textToSpeak);

@@ -8,12 +8,13 @@ abstract class ProfileState extends Equatable {
 
 class ProfileInitial extends ProfileState {}
 class ProfileLoading extends ProfileState {}
+
 class ProfileLoadSuccess extends ProfileState {
-  final UserModel user;
-  //final UserStats stats;
-  //const ProfileLoadSuccess({required this.user, required this.stats});
-  const ProfileLoadSuccess({required this.user});
+  // Ahora contiene el nuevo modelo de estadísticas
+  final UserStatsSummary stats;
+  const ProfileLoadSuccess({required this.stats});
 }
+
 class ProfileLoadFailure extends ProfileState {
   final String error;
   const ProfileLoadFailure(this.error);

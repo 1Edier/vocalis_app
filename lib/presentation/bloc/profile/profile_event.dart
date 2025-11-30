@@ -6,7 +6,6 @@ abstract class ProfileEvent extends Equatable {
   List<Object> get props => [];
 }
 
-class FetchProfileData extends ProfileEvent {
-  final String userId;
-  const FetchProfileData(this.userId);
-}
+// --- CORRECCIÓN CLAVE ---
+// Se elimina el parámetro 'userId' porque ya no es necesario.
+class FetchProfileData extends ProfileEvent {}

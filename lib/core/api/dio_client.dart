@@ -1,44 +1,52 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
-// --- IMPORTANTE: CAMBIA ESTAS IPs POR LA IP DE TU MÁQUINA ---
-const String _authBaseUrl = 'http://192.168.1.68:3001/api/v1';
-const String _exercisesBaseUrl = 'http://192.168.1.68:8001/api/v1';
-const String _validationBaseUrl = 'http://192.168.1.68:8001/api/v1';
+const String _myLocalIp = '192.168.1.68'; // <<< ¡RECUERDA PONER TU IP AQUÍ!
+
+const String _authBaseUrl = 'https://api-gateway.politecoast-4396a3db.eastus.azurecontainerapps.io/api/v1';
+const String _exercisesBaseUrl = 'https://api-gateway.politecoast-4396a3db.eastus.azurecontainerapps.io/api/v1';
+const String _validationBaseUrl = 'https://api-gateway.politecoast-4396a3db.eastus.azurecontainerapps.io/api/v1';
 
 class DioClient {
-// LÍNEA CORREGIDA
   static final _storage = const FlutterSecureStorage();
 
-  // Cliente para el servicio de Autenticación y Usuarios
+  // Interceptor reutilizable para añadir el token
+  static InterceptorsWrapper _getAuthInterceptor() {
+    return InterceptorsWrapper(
+      onRequest: (options, handler) async {
+        final token = await _storage.read(key: 'accessToken');
+        if (token != null) {
+          options.headers['Authorization'] = 'Bearer $token';
+        }
+        return handler.next(options);
+      },
+    );
+  }
+
   static Dio createAuthDio() {
     final dio = Dio(BaseOptions(baseUrl: _authBaseUrl));
-
-    // Interceptor para añadir el token a las cabeceras automáticamente
-    dio.interceptors.add(
-      InterceptorsWrapper(
-        onRequest: (options, handler) async {
-          final token = await _storage.read(key: 'accessToken');
-          if (token != null) {
-            options.headers['Authorization'] = 'Bearer $token';
-          }
-          return handler.next(options);
-        },
-      ),
-    );
+    dio.interceptors.add(_getAuthInterceptor());
     return dio;
   }
 
-  // Cliente para el servicio de Ejercicios
+  // --- CORRECCIÓN ---
+  // El cliente de ejercicios ahora también necesita el token de autenticación.
   static Dio createExercisesDio() {
     final dio = Dio(BaseOptions(baseUrl: _exercisesBaseUrl));
-    // Por ahora no necesita interceptor de token, pero podría añadirse si es necesario
+    dio.interceptors.add(_getAuthInterceptor());
     return dio;
   }
 
   static Dio createValidationDio() {
     final dio = Dio(BaseOptions(baseUrl: _validationBaseUrl));
-    // Podría necesitar un token de autenticación en el futuro
+    // Este servicio también requiere autenticación, así que le añadimos el interceptor.
+    dio.interceptors.add(_getAuthInterceptor()); // <<< LÍNEA AÑADIDA
+    return dio;
+  }
+  static Dio createProgressionDio() {
+    final dio = Dio(BaseOptions(baseUrl: _exercisesBaseUrl));
+    // Este servicio necesita el token de autenticación
+    dio.interceptors.add(_getAuthInterceptor());
     return dio;
   }
 }
