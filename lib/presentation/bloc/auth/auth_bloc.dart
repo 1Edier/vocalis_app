@@ -1,21 +1,25 @@
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
+import 'package:vocalis/presentation/bloc/progression/progression_bloc.dart';
 import '../../../data/models/user_model.dart';
 import '../../../data/repositories/auth_repository.dart';
-import '../../../data/repositories/progression_repository.dart'; // <<< AÑADIDO
+import '../../../data/repositories/progression_repository.dart';
 
 part 'auth_event.dart';
 part 'auth_state.dart';
 
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final AuthRepository _authRepository;
-  final ProgressionRepository _progressionRepository; // <<< AÑADIDO
+  final ProgressionRepository _progressionRepository;
+  final ProgressionBloc _progressionBloc;
 
   AuthBloc({
     required AuthRepository authRepository,
-    required ProgressionRepository progressionRepository, // <<< AÑADIDO
+    required ProgressionRepository progressionRepository,
+    required ProgressionBloc progressionBloc,
   })  : _authRepository = authRepository,
-        _progressionRepository = progressionRepository, // <<< AÑADIDO
+        _progressionRepository = progressionRepository,
+        _progressionBloc = progressionBloc,
         super(AuthInitial()) {
     on<AppStarted>(_onAppStarted);
     on<LoginRequested>(_onLoginRequested);
@@ -36,8 +40,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     emit(AuthLoading());
     try {
       final user = await _authRepository.login(email: event.email, password: event.password);
-      // Opcional: Podrías llamar a initializeProgress aquí también como un respaldo
-      // _progressionRepository.initializeProgress();
       emit(AuthSuccess(user));
     } catch (e) {
       emit(AuthFailure(e.toString()));
@@ -47,7 +49,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   Future<void> _onSignUpRequested(SignUpRequested event, Emitter<AuthState> emit) async {
     emit(AuthLoading());
     try {
-      // 1. Intentamos registrar al usuario
       await _authRepository.signUp(
         fullName: event.fullName,
         age: event.age,
@@ -55,18 +56,17 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         password: event.password,
       );
 
-      // 2. Si el registro fue exitoso, iniciamos sesión automáticamente para obtener el token
       final user = await _authRepository.login(
         email: event.email,
         password: event.password,
       );
 
-      // 3. Con el token ya guardado, llamamos para inicializar el progreso
+      // 1. Inicializa el progreso del nuevo usuario
       await _progressionRepository.initializeProgress();
+      // 2. Dispara el evento para que ProgressionBloc recargue los datos
+      _progressionBloc.add(FetchProgressionMap());
 
-      // 4. Finalmente, emitimos el estado de éxito con los datos del usuario
       emit(AuthSuccess(user));
-
     } catch (e) {
       emit(AuthFailure(e.toString()));
     }

@@ -14,7 +14,7 @@ const double _topPaddingForStars = 20.0;
 
 // Paleta de colores
 const Color _unlockedPlanetColor = Color(0xFF4DB6AC);
-const Color _completedPlanetColor = Color(0xFF4DB6AC); // Restauramos el color para 'completed'
+const Color _completedPlanetColor = Color(0xFF4DB6AC);
 const Color _lockedPlanetColor = Color(0xFF757575);
 const Color _lineColor = Color(0x99E0E0E0);
 const Color _starColor = Color(0xFFFFD700);
@@ -63,11 +63,7 @@ class _PathSegment extends StatelessWidget {
   final bool isNodeOnLeft;
   final bool hasNextNode;
 
-  const _PathSegment({
-    required this.exercise,
-    required this.isNodeOnLeft,
-    required this.hasNextNode,
-  });
+  const _PathSegment({required this.exercise, required this.isNodeOnLeft, required this.hasNextNode});
 
   @override
   Widget build(BuildContext context) {
@@ -82,7 +78,6 @@ class _PathSegment extends StatelessWidget {
             ),
             size: Size.infinite,
           ),
-
         Align(
           alignment: isNodeOnLeft ? Alignment.centerLeft : Alignment.centerRight,
           child: Padding(
@@ -106,92 +101,56 @@ class _PathNode extends StatelessWidget {
     final bool isCompleted = exercise.status == 'completed';
 
     Color planetColor;
+    Widget nodeContent;
 
     if (isLocked) {
       planetColor = _lockedPlanetColor;
-    } else if (isCompleted) {
-      planetColor = _completedPlanetColor;
+      nodeContent = const Icon(Icons.lock, color: Colors.white, size: 40);
     } else {
-      planetColor = _unlockedPlanetColor;
+      planetColor = isAvailable ? _unlockedPlanetColor : _completedPlanetColor;
+      nodeContent = Text(
+        '${exercise.orderIndex}',
+        style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold),
+      );
     }
 
     return Stack(
       clipBehavior: Clip.none,
       alignment: Alignment.topCenter,
       children: [
-        // La columna contiene el planeta y la etiqueta, con un padding superior
-        // para dejar espacio a las estrellas.
         Padding(
           padding: const EdgeInsets.only(top: _topPaddingForStars),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
+          child: Stack(
+            alignment: Alignment.center,
             children: [
-              Stack(
-                alignment: Alignment.center,
-                children: [
-                  if (isAvailable) PulsingRing(color: planetColor),
-
-                  InkWell(
-                    onTap: isLocked ? null : () async {
-                      final result = await Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => ExerciseScreen(exerciseId: exercise.exerciseId),
-                        ),
-                      );
-                      if (result == true && context.mounted) {
-                        context.read<ProgressionBloc>().add(FetchProgressionMap());
-                      }
-                    },
-                    child: Container(
-                      width: _nodeSize,
-                      height: _nodeSize,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: LinearGradient(
-                          colors: [_lighten(planetColor, 0.15), planetColor, _darken(planetColor, 0.1)],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        boxShadow: [
-                          BoxShadow(color: Colors.black.withOpacity(0.25), blurRadius: 8, offset: const Offset(0, 4)),
-                        ],
-                      ),
-                      child: Center(
-                        child: Text(
-                          '${exercise.orderIndex}',
-                          style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold),
-                        ),
-                      ),
+              if (isAvailable) PulsingRing(color: planetColor),
+              InkWell(
+                onTap: isLocked ? null : () async {
+                  final result = await Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => ExerciseScreen(exerciseId: exercise.exerciseId)),
+                  );
+                  if (result == true && context.mounted) {
+                    context.read<ProgressionBloc>().add(FetchProgressionMap());
+                  }
+                },
+                child: Container(
+                  width: _nodeSize,
+                  height: _nodeSize,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(
+                      colors: [_lighten(planetColor, 0.15), planetColor, _darken(planetColor, 0.1)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
                     ),
+                    boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.25), blurRadius: 8, offset: const Offset(0, 4))],
                   ),
-                ],
+                  child: Center(child: nodeContent),
+                ),
               ),
-              const SizedBox(height: 12),
-              // --- ETIQUETA DE TÍTULO REINCORPORADA ---
-              Container(
-                width: _nodeSize + 40,
-                height: 36,
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                decoration: BoxDecoration(
-                  color: planetColor.withOpacity(isLocked ? 0.7 : 0.8),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Center(
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text(
-                      exercise.title,
-                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500, fontSize: 12),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                ),
-              )
             ],
           ),
         ),
-
-        // Estrellas en la parte superior
         Positioned(
           top: 0,
           child: isLocked
@@ -220,13 +179,11 @@ class _StarsDisplay extends StatelessWidget {
   final double iconSize;
   final Color color;
   final bool earned;
-
   const _StarsDisplay({required this.starCount, this.iconSize = 24.0, required this.color, this.earned = true});
 
   @override
   Widget build(BuildContext context) {
     if (starCount <= 0) return const SizedBox.shrink();
-
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       mainAxisSize: MainAxisSize.min,
@@ -310,19 +267,12 @@ class DashedLinePainter extends CustomPainter {
     final double leftX = horizontalMargin + (_nodeSize / 2);
     final double rightX = size.width - horizontalMargin - (_nodeSize / 2);
 
-    // --- CORRECCIÓN FINAL DE COORDENADAS ---
-    // El centro vertical del nodo actual (el de abajo), teniendo en cuenta el padding.
     final double currentY = _topPaddingForStars + (_nodeSize / 2);
 
-    // Coordenadas del punto de inicio
     final Offset startPoint = Offset(isStartNodeOnLeft ? leftX : rightX, currentY);
-
-    // Coordenadas del punto final (el nodo de arriba)
     final Offset endPoint = Offset(isStartNodeOnLeft ? rightX : leftX, currentY - _verticalSpacing);
 
-    final path = Path()
-      ..moveTo(startPoint.dx, startPoint.dy)
-      ..lineTo(endPoint.dx, endPoint.dy);
+    final path = Path()..moveTo(startPoint.dx, startPoint.dy)..lineTo(endPoint.dx, endPoint.dy);
 
     const double dashWidth = 4;
     const double dashSpace = 4;
@@ -330,10 +280,7 @@ class DashedLinePainter extends CustomPainter {
 
     for (final metric in path.computeMetrics()) {
       while (distance < metric.length) {
-        canvas.drawPath(
-          metric.extractPath(distance, distance + dashWidth),
-          paint,
-        );
+        canvas.drawPath(metric.extractPath(distance, distance + dashWidth), paint);
         distance += dashWidth + dashSpace;
       }
     }

@@ -26,7 +26,6 @@ class ExerciseBloc extends Bloc<ExerciseEvent, ExerciseState> {
       : _progressionRepository = progressionRepository,
         super(ExerciseInitial()) {
     _initializeTts();
-
     _userAudioPlayer.onPlayerStateChanged.listen((state) {
       if ((state == PlayerState.completed || state == PlayerState.stopped) && this.state is ExerciseReadyState) {
         if ((this.state as ExerciseReadyState).isUserAudioPlaying) {
@@ -43,6 +42,7 @@ class ExerciseBloc extends Bloc<ExerciseEvent, ExerciseState> {
     on<PlayUserAudioRequested>(_onPlayUserAudio);
     on<StopUserAudioRequested>(_onStopUserAudio);
     on<PlayInstructionRequested>(_onPlayInstruction);
+    on<StopAudioPlayback>(_onStopAudioPlayback);
   }
 
   Future<void> _initializeTts() async {
@@ -133,15 +133,20 @@ class ExerciseBloc extends Bloc<ExerciseEvent, ExerciseState> {
         );
         emit(ProcessingSuccess(currentState.exercise, userAudioPath: event.filePath, result: result));
 
-        // --- LÓGICA DE LECTURA AUTOMÁTICA ---
         await _speakFeedback(result.feedback);
 
       } catch (e) {
-        emit(ProcessingFailure(currentState.exercise, userAudioPath: event.filePath, error: e.toString()));
+        final errorMessage = e.toString().replaceFirst("Exception: ", "");
+        emit(ProcessingFailure(currentState.exercise, userAudioPath: event.filePath, error: errorMessage));
+
+        // --- CORRECCIÓN CLAVE: LEER EL MENSAJE DE ERROR ---
+        // Después de emitir el estado de fallo, leemos el error en voz alta.
+        await _flutterTts.stop(); // Detiene cualquier audio anterior
+        await _flutterTts.speak("Hubo un problema. $errorMessage");
+        await _flutterTts.awaitSpeakCompletion(true);
       }
     }
   }
-
   Future<void> _speakFeedback(FeedbackDetail feedback) async {
     await _referenceAudioPlayer.stop();
     await _userAudioPlayer.stop();
@@ -205,6 +210,12 @@ class ExerciseBloc extends Bloc<ExerciseEvent, ExerciseState> {
         }
       }
     }
+  }
+
+  Future<void> _onStopAudioPlayback(StopAudioPlayback event, Emitter<ExerciseState> emit) async {
+    await _referenceAudioPlayer.stop();
+    await _userAudioPlayer.stop();
+    await _flutterTts.stop();
   }
 
   @override

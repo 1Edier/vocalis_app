@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:lottie/lottie.dart';
 import 'package:vocalis/core/theme/app_theme.dart';
+import 'package:vocalis/data/models/progression_map_model.dart';
+import 'package:vocalis/presentation/bloc/progression/progression_bloc.dart';
+import 'package:vocalis/presentation/screens/exercise/exercise_screen.dart';
 import '../../data/models/user_model.dart';
 import '../bloc/auth/auth_bloc.dart';
 import 'auth/login_screen.dart';
@@ -10,38 +13,36 @@ import 'profile/profile_screen.dart';
 
 class MainScaffold extends StatefulWidget {
   final UserModel user;
-  const MainScaffold({super.key, required this.user});
+  final int initialIndex;
+
+  const MainScaffold({super.key, required this.user, this.initialIndex = 0});
+
   @override
   State<MainScaffold> createState() => _MainScaffoldState();
 }
 
 class _MainScaffoldState extends State<MainScaffold> with TickerProviderStateMixin {
-  int _selectedIndex = 0;
+  late int _selectedIndex;
   late final List<Widget> _widgetOptions;
-
-  // Controladores y composición para la animación de Lottie
   late final AnimationController _lottieController;
   Future<LottieComposition>? _composition;
 
   @override
   void initState() {
     super.initState();
-    _widgetOptions = <Widget>[
+    _selectedIndex = widget.initialIndex;
+
+    // --- CORRECCIÓN: Lista de widgets reducida a 3 ---
+    _widgetOptions = [
       const HomeScreen(),
-      // Hacemos las pantallas placeholder transparentes
-      Scaffold(backgroundColor: Colors.transparent, body: Center(child: Text('Página de Metas', style: TextStyle(color: Colors.white)))),
-      Scaffold(backgroundColor: Colors.transparent, body: Center(child: Text('Página de Comunidad', style: TextStyle(color: Colors.white)))),
-      ProfileScreen(user: widget.user),
+      const SizedBox.shrink(), // Placeholder para el botón de atajo (índice 1)
+      ProfileScreen(user: widget.user), // Perfil ahora es el índice 2
     ];
 
-    // Lógica para la animación de fondo suave
     _lottieController = AnimationController(vsync: this);
     _composition = AssetLottie('assets/lottie/space_background.json').load();
     _lottieController.addStatusListener((status) {
-      if (status == AnimationStatus.completed) {
-        _lottieController.reset();
-        _lottieController.forward();
-      }
+      if (status == AnimationStatus.completed) { _lottieController.reset(); _lottieController.forward(); }
     });
   }
 
@@ -51,7 +52,37 @@ class _MainScaffoldState extends State<MainScaffold> with TickerProviderStateMix
     super.dispose();
   }
 
-  void _onItemTapped(int index) => setState(() => _selectedIndex = index);
+  void _onItemTapped(int index) {
+    if (index == 1) { // Botón de atajo a "Metas"
+      final progressionState = context.read<ProgressionBloc>().state;
+      if (progressionState is ProgressionLoadSuccess) {
+        ExerciseProgress? nextExercise;
+        for (final category in progressionState.progressionMap.categories) {
+          for (final exercise in category.exercises) {
+            if (exercise.status == 'available') {
+              nextExercise = exercise;
+              break;
+            }
+          }
+          if (nextExercise != null) break;
+        }
+
+        if (nextExercise != null && context.mounted) {
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => ExerciseScreen(exerciseId: nextExercise!.exerciseId)),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('¡Felicidades! Has completado todos los ejercicios.')),
+          );
+        }
+      }
+      return; // No cambia la pestaña seleccionada
+    }
+
+    // Para los otros iconos (Home y Perfil), cambiamos la pestaña
+    setState(() => _selectedIndex = index);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -63,7 +94,6 @@ class _MainScaffoldState extends State<MainScaffold> with TickerProviderStateMix
       },
       child: Stack(
         children: [
-          // --- FONDO DE ANIMACIÓN GLOBAL ---
           Positioned.fill(
             child: FutureBuilder<LottieComposition>(
               future: _composition,
@@ -81,38 +111,26 @@ class _MainScaffoldState extends State<MainScaffold> with TickerProviderStateMix
               },
             ),
           ),
-          // --- SCAFFOLD TRANSPARENTE ---
           Scaffold(
-            backgroundColor: Colors.transparent, // <-- El Scaffold principal es transparente
+            backgroundColor: Colors.transparent,
             body: Center(child: _widgetOptions.elementAt(_selectedIndex)),
-            bottomNavigationBar: Container(
-              margin: const EdgeInsets.fromLTRB(24, 0, 24, 32),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(30),
-                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), spreadRadius: 2, blurRadius: 15, offset: const Offset(0, 5))],
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(30),
-                child: BottomNavigationBar(
-                  items: const <BottomNavigationBarItem>[
-                    BottomNavigationBarItem(icon: Icon(Icons.home_rounded), label: 'Home'),
-                    BottomNavigationBarItem(icon: Icon(Icons.flag_rounded), label: 'Metas'),
-                    BottomNavigationBarItem(icon: Icon(Icons.people_alt_rounded), label: 'Comunidad'),
-                    BottomNavigationBarItem(icon: Icon(Icons.settings_rounded), label: 'Ajustes'),
-                  ],
-                  currentIndex: _selectedIndex,
-                  selectedItemColor: AppTheme.primaryColor,
-                  unselectedItemColor: Colors.grey[400],
-                  onTap: _onItemTapped,
-                  showSelectedLabels: false,
-                  showUnselectedLabels: false,
-                  type: BottomNavigationBarType.fixed,
-                  elevation: 0,
-                  backgroundColor: Colors.transparent,
-                  iconSize: 28,
-                ),
-              ),
+            bottomNavigationBar: BottomNavigationBar(
+              // --- CORRECCIÓN: Lista de ítems reducida a 3 ---
+              items: const <BottomNavigationBarItem>[
+                BottomNavigationBarItem(icon: Icon(Icons.home_rounded), label: 'Home'),
+                BottomNavigationBarItem(icon: Icon(Icons.flag_rounded), label: 'Metas'),
+                BottomNavigationBarItem(icon: Icon(Icons.people_alt_rounded), label: 'Ajustes'),
+              ],
+              currentIndex: _selectedIndex,
+              selectedItemColor: AppTheme.primaryColor,
+              unselectedItemColor: Colors.grey[600],
+              onTap: _onItemTapped,
+              showSelectedLabels: false,
+              showUnselectedLabels: false,
+              type: BottomNavigationBarType.fixed,
+              backgroundColor: Colors.white,
+              elevation: 8.0,
+              iconSize: 28,
             ),
           ),
         ],

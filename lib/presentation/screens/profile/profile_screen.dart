@@ -112,15 +112,10 @@ class ProfileScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                user.fullName,
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontSize: 26),
-                overflow: TextOverflow.ellipsis,
-              ),
               const SizedBox(height: 4),
               Text(
                 user.email,
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Colors.grey[600]),
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontSize: 26),
                 overflow: TextOverflow.ellipsis,
               ),
             ],
