@@ -1,7 +1,7 @@
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:lottie/lottie.dart';
-import '../../../core/theme/app_theme.dart';
 import '../../bloc/progression/progression_bloc.dart';
 import 'locked_category_screen.dart';
 import 'progression_path_screen.dart';
@@ -33,9 +33,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Scaffold(
-      backgroundColor: Colors.transparent, // Transparente para ver el fondo del MainScaffold
-      appBar: const _HomeAppBar(),
+      backgroundColor: Colors.transparent,
+      appBar: null, // Sin AppBar predefinido
       body: BlocBuilder<ProgressionBloc, ProgressionState>(
         builder: (context, state) {
           if (state is ProgressionLoading) {
@@ -74,15 +76,68 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
             return Column(
               children: [
-                Container(
-                  color: AppTheme.backgroundColor.withOpacity(0.9),
-                  child: TabBar(
-                    controller: _tabController,
-                    labelColor: AppTheme.primaryColor,
-                    unselectedLabelColor: Colors.grey[600],
-                    indicatorColor: AppTheme.primaryColor,
-                    labelStyle: const TextStyle(fontWeight: FontWeight.bold),
-                    tabs: categories.map((cat) => Tab(text: cat.name)).toList(),
+                // Header "Mapa de Progreso" con glassmorphism
+                ClipRect(
+                  child: BackdropFilter(
+                    filter: ui.ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? const Color(0xFF0b1016).withOpacity(0.7)
+                            : Colors.white.withOpacity(0.8),
+                        border: Border(
+                          bottom: BorderSide(
+                            color: isDark
+                                ? const Color(0xFF2ce0bd).withOpacity(0.1)
+                                : Colors.grey.withOpacity(0.15),
+                            width: 1,
+                          ),
+                        ),
+                      ),
+                      child: SafeArea(
+                        bottom: false,
+                        child: Container(
+                          height: 60,
+                          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                          alignment: Alignment.center,
+                          child: Text(
+                            'Mapa de Progreso',
+                            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                // Tabs de categorías con glassmorphism
+                ClipRect(
+                  child: BackdropFilter(
+                    filter: ui.ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? const Color(0xFF0b1016).withOpacity(0.7)
+                            : Colors.white.withOpacity(0.8),
+                        border: Border(
+                          bottom: BorderSide(
+                            color: isDark
+                                ? const Color(0xFF2ce0bd).withOpacity(0.1)
+                                : Colors.grey.withOpacity(0.15),
+                            width: 1,
+                          ),
+                        ),
+                      ),
+                      child: TabBar(
+                        controller: _tabController,
+                        labelColor: Theme.of(context).colorScheme.secondary,
+                        unselectedLabelColor: Theme.of(context).colorScheme.onSurfaceVariant,
+                        indicatorColor: Theme.of(context).colorScheme.secondary,
+                        labelStyle: const TextStyle(fontWeight: FontWeight.bold),
+                        tabs: categories.map((cat) => Tab(text: cat.name)).toList(),
+                      ),
+                    ),
                   ),
                 ),
                 Expanded(
@@ -132,37 +187,4 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       ),
     );
   }
-}
-
-class _HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
-  const _HomeAppBar();
-
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      child: Container(
-        color: AppTheme.backgroundColor.withOpacity(0.9),
-        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStatChip(IconData icon, String label, Color color) {
-    return Row(
-      children: [
-        Icon(icon, color: color, size: 24),
-        const SizedBox(width: 8),
-        Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-      ],
-    );
-  }
-
-  @override
-  Size get preferredSize => const Size.fromHeight(60);
 }

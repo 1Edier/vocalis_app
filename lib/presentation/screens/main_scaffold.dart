@@ -1,7 +1,7 @@
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:lottie/lottie.dart';
-import 'package:vocalis/core/theme/app_theme.dart';
 import 'package:vocalis/data/models/progression_map_model.dart';
 import 'package:vocalis/presentation/bloc/progression/progression_bloc.dart';
 import 'package:vocalis/presentation/screens/exercise/exercise_screen.dart';
@@ -113,24 +113,44 @@ class _MainScaffoldState extends State<MainScaffold> with TickerProviderStateMix
           ),
           Scaffold(
             backgroundColor: Colors.transparent,
+            extendBodyBehindAppBar: true, // Extiende el body detrás del AppBar
             body: Center(child: _widgetOptions.elementAt(_selectedIndex)),
-            bottomNavigationBar: BottomNavigationBar(
-              // --- CORRECCIÓN: Lista de ítems reducida a 3 ---
-              items: const <BottomNavigationBarItem>[
-                BottomNavigationBarItem(icon: Icon(Icons.home_rounded), label: 'Home'),
-                BottomNavigationBarItem(icon: Icon(Icons.flag_rounded), label: 'Metas'),
-                BottomNavigationBarItem(icon: Icon(Icons.people_alt_rounded), label: 'Ajustes'),
-              ],
-              currentIndex: _selectedIndex,
-              selectedItemColor: AppTheme.primaryColor,
-              unselectedItemColor: Colors.grey[600],
-              onTap: _onItemTapped,
-              showSelectedLabels: false,
-              showUnselectedLabels: false,
-              type: BottomNavigationBarType.fixed,
-              backgroundColor: Colors.white,
-              elevation: 8.0,
-              iconSize: 28,
+            bottomNavigationBar: Container(
+              decoration: BoxDecoration(
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? const Color(0xFF0b1016).withOpacity(0.5) // Más transparente en dark
+                    : Colors.white.withOpacity(0.7), // Más transparente en light
+                border: Border(
+                  top: BorderSide(
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? const Color(0xFF2ce0bd).withOpacity(0.1) // Borde neón sutil
+                        : Colors.grey.withOpacity(0.15),
+                    width: 1,
+                  ),
+                ),
+              ),
+              child: ClipRect(
+                child: BackdropFilter(
+                  filter: ui.ImageFilter.blur(sigmaX: 10, sigmaY: 10), // Efecto blur
+                  child: BottomNavigationBar(
+                    items: const <BottomNavigationBarItem>[
+                      BottomNavigationBarItem(icon: Icon(Icons.home_rounded), label: 'Home'),
+                      BottomNavigationBarItem(icon: Icon(Icons.flag_rounded), label: 'Metas'),
+                      BottomNavigationBarItem(icon: Icon(Icons.people_alt_rounded), label: 'Ajustes'),
+                    ],
+                    currentIndex: _selectedIndex,
+                    selectedItemColor: Theme.of(context).colorScheme.secondary, // Turquesa neón
+                    unselectedItemColor: Theme.of(context).colorScheme.onSurfaceVariant,
+                    onTap: _onItemTapped,
+                    showSelectedLabels: false,
+                    showUnselectedLabels: false,
+                    type: BottomNavigationBarType.fixed,
+                    backgroundColor: Colors.transparent, // Transparente para mostrar el blur
+                    elevation: 0,
+                    iconSize: 28,
+                  ),
+                ),
+              ),
             ),
           ),
         ],

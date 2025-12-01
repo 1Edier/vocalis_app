@@ -29,3 +29,4 @@ class SignUpRequested extends AuthEvent {
 // --- NUEVO EVENTO ---
 class AppStarted extends AuthEvent {}
 class LogoutRequested extends AuthEvent {}
+class TokenExpired extends AuthEvent {}
