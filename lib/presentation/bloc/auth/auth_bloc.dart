@@ -25,6 +25,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<LoginRequested>(_onLoginRequested);
     on<SignUpRequested>(_onSignUpRequested);
     on<LogoutRequested>(_onLogoutRequested);
+    on<TokenExpired>(_onTokenExpired);
   }
 
   Future<void> _onAppStarted(AppStarted event, Emitter<AuthState> emit) async {
@@ -75,5 +76,10 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   Future<void> _onLogoutRequested(LogoutRequested event, Emitter<AuthState> emit) async {
     await _authRepository.logout();
     emit(const AuthFailure("Sesión cerrada."));
+  }
+
+  Future<void> _onTokenExpired(TokenExpired event, Emitter<AuthState> emit) async {
+    await _authRepository.logout();
+    emit(const AuthFailure("Tu sesión ha expirado. Por favor, inicia sesión nuevamente."));
   }
 }

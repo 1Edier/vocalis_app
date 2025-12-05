@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:lottie/lottie.dart';
-import 'package:vocalis/core/theme/app_theme.dart';
 import 'package:vocalis/data/models/progression_map_model.dart';
 import 'package:vocalis/presentation/bloc/progression/progression_bloc.dart';
 import 'package:vocalis/presentation/screens/exercise/exercise_screen.dart';
 import '../../data/models/user_model.dart';
 import '../bloc/auth/auth_bloc.dart';
+import '../widgets/widgets.dart';
 import 'auth/login_screen.dart';
 import 'home/home_screen.dart';
 import 'profile/profile_screen.dart';
@@ -32,17 +32,19 @@ class _MainScaffoldState extends State<MainScaffold> with TickerProviderStateMix
     super.initState();
     _selectedIndex = widget.initialIndex;
 
-    // --- CORRECCIÓN: Lista de widgets reducida a 3 ---
     _widgetOptions = [
       const HomeScreen(),
       const SizedBox.shrink(), // Placeholder para el botón de atajo (índice 1)
-      ProfileScreen(user: widget.user), // Perfil ahora es el índice 2
+      ProfileScreen(user: widget.user),
     ];
 
     _lottieController = AnimationController(vsync: this);
     _composition = AssetLottie('assets/lottie/space_background.json').load();
     _lottieController.addStatusListener((status) {
-      if (status == AnimationStatus.completed) { _lottieController.reset(); _lottieController.forward(); }
+      if (status == AnimationStatus.completed) {
+        _lottieController.reset();
+        _lottieController.forward();
+      }
     });
   }
 
@@ -53,7 +55,8 @@ class _MainScaffoldState extends State<MainScaffold> with TickerProviderStateMix
   }
 
   void _onItemTapped(int index) {
-    if (index == 1) { // Botón de atajo a "Metas"
+    if (index == 1) {
+      // Botón de atajo a "Metas"
       final progressionState = context.read<ProgressionBloc>().state;
       if (progressionState is ProgressionLoadSuccess) {
         ExerciseProgress? nextExercise;
@@ -77,10 +80,9 @@ class _MainScaffoldState extends State<MainScaffold> with TickerProviderStateMix
           );
         }
       }
-      return; // No cambia la pestaña seleccionada
+      return;
     }
 
-    // Para los otros iconos (Home y Perfil), cambiamos la pestaña
     setState(() => _selectedIndex = index);
   }
 
@@ -89,7 +91,10 @@ class _MainScaffoldState extends State<MainScaffold> with TickerProviderStateMix
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, state) {
         if (state is AuthFailure) {
-          Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder: (_) => const LoginScreen()), (route) => false);
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (_) => const LoginScreen()),
+            (route) => false,
+          );
         }
       },
       child: Stack(
@@ -104,7 +109,11 @@ class _MainScaffoldState extends State<MainScaffold> with TickerProviderStateMix
                   if (!_lottieController.isAnimating) {
                     _lottieController.forward();
                   }
-                  return Lottie(composition: composition, controller: _lottieController, fit: BoxFit.cover);
+                  return Lottie(
+                    composition: composition,
+                    controller: _lottieController,
+                    fit: BoxFit.cover,
+                  );
                 } else {
                   return Container(color: const Color(0xFF2E2A4F));
                 }
@@ -113,24 +122,12 @@ class _MainScaffoldState extends State<MainScaffold> with TickerProviderStateMix
           ),
           Scaffold(
             backgroundColor: Colors.transparent,
+            extendBodyBehindAppBar: true,
             body: Center(child: _widgetOptions.elementAt(_selectedIndex)),
-            bottomNavigationBar: BottomNavigationBar(
-              // --- CORRECCIÓN: Lista de ítems reducida a 3 ---
-              items: const <BottomNavigationBarItem>[
-                BottomNavigationBarItem(icon: Icon(Icons.home_rounded), label: 'Home'),
-                BottomNavigationBarItem(icon: Icon(Icons.flag_rounded), label: 'Metas'),
-                BottomNavigationBarItem(icon: Icon(Icons.people_alt_rounded), label: 'Ajustes'),
-              ],
+            bottomNavigationBar: GlassBottomNavBar(
               currentIndex: _selectedIndex,
-              selectedItemColor: AppTheme.primaryColor,
-              unselectedItemColor: Colors.grey[600],
               onTap: _onItemTapped,
-              showSelectedLabels: false,
-              showUnselectedLabels: false,
-              type: BottomNavigationBarType.fixed,
-              backgroundColor: Colors.white,
-              elevation: 8.0,
-              iconSize: 28,
+              items: VocalisNavItems.mainItems,
             ),
           ),
         ],

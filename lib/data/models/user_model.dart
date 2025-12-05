@@ -8,6 +8,7 @@ class UserModel extends Equatable {
   final int age;
   final String? avatarUrl;
   final String? difficultyLevel;
+  final DateTime? createdAt;
 
   const UserModel({
     required this.id,
@@ -17,6 +18,7 @@ class UserModel extends Equatable {
     required this.age,
     this.avatarUrl,
     this.difficultyLevel,
+    this.createdAt,
   });
 
   // --- ESTA ES LA SECCIÓN CORREGIDA ---
@@ -33,9 +35,10 @@ class UserModel extends Equatable {
       // Estos campos ya eran "nulables" (String?), por lo que no necesitan cambios.
       avatarUrl: json['avatarUrl'],
       difficultyLevel: json['difficultyLevel'],
+      createdAt: json['createdAt'] != null ? DateTime.parse(json['createdAt']) : null,
     );
   }
 
   @override
-  List<Object?> get props => [id, email, role, fullName, age, avatarUrl, difficultyLevel];
+  List<Object?> get props => [id, email, role, fullName, age, avatarUrl, difficultyLevel, createdAt];
 }

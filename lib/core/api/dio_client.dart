@@ -9,6 +9,9 @@ const String _validationBaseUrl = 'https://api-gateway.politecoast-4396a3db.east
 
 class DioClient {
   static final _storage = const FlutterSecureStorage();
+  
+  // Callback para manejar la expiración del token
+  static void Function()? onTokenExpired;
 
   // Interceptor reutilizable para añadir el token
   static InterceptorsWrapper _getAuthInterceptor() {
@@ -19,6 +22,19 @@ class DioClient {
           options.headers['Authorization'] = 'Bearer $token';
         }
         return handler.next(options);
+      },
+      onError: (DioException error, handler) async {
+        // Si recibimos un error 401 (Unauthorized), el token expiró o es inválido
+        if (error.response?.statusCode == 401) {
+          // Eliminamos el token inválido
+          await _storage.delete(key: 'accessToken');
+          
+          // Notificamos que el token expiró
+          if (onTokenExpired != null) {
+            onTokenExpired!();
+          }
+        }
+        return handler.next(error);
       },
     );
   }

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:lottie/lottie.dart';
-import '../../../core/theme/app_theme.dart';
 import '../../bloc/progression/progression_bloc.dart';
+import '../../widgets/widgets.dart';
 import 'locked_category_screen.dart';
 import 'progression_path_screen.dart';
 
@@ -20,8 +20,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
-    // Le pedimos al ProgressionBloc que cargue (o recargue) los datos
-    // cada vez que esta pantalla se construye.
     context.read<ProgressionBloc>().add(FetchProgressionMap());
   }
 
@@ -34,8 +32,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.transparent, // Transparente para ver el fondo del MainScaffold
-      appBar: const _HomeAppBar(),
+      backgroundColor: Colors.transparent,
+      appBar: null,
       body: BlocBuilder<ProgressionBloc, ProgressionState>(
         builder: (context, state) {
           if (state is ProgressionLoading) {
@@ -52,10 +50,14 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             final categories = state.progressionMap.categories;
 
             if (categories.isEmpty) {
-              return const Center(child: Text("No se encontraron categorías.", style: TextStyle(color: Colors.white)));
+              return const Center(
+                child: Text(
+                  "No se encontraron categorías.",
+                  style: TextStyle(color: Colors.white),
+                ),
+              );
             }
 
-            // Gestionamos nuestro propio TabController para mantener la pestaña seleccionada
             if (_tabController == null || _tabController!.length != categories.length) {
               _tabController?.dispose();
               _tabController = TabController(
@@ -74,13 +76,29 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
             return Column(
               children: [
-                Container(
-                  color: AppTheme.backgroundColor.withOpacity(0.9),
+                // Header "Mapa de Progreso"
+                GlassHeader(
+                  child: SafeArea(
+                    bottom: false,
+                    child: Container(
+                      height: 60,
+                      alignment: Alignment.center,
+                      child: Text(
+                        'Mapa de Progreso',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                // Tabs de categorías
+                GlassHeader(
                   child: TabBar(
                     controller: _tabController,
-                    labelColor: AppTheme.primaryColor,
-                    unselectedLabelColor: Colors.grey[600],
-                    indicatorColor: AppTheme.primaryColor,
+                    labelColor: Theme.of(context).colorScheme.secondary,
+                    unselectedLabelColor: Theme.of(context).colorScheme.onSurfaceVariant,
+                    indicatorColor: Theme.of(context).colorScheme.secondary,
                     labelStyle: const TextStyle(fontWeight: FontWeight.bold),
                     tabs: categories.map((cat) => Tab(text: cat.name)).toList(),
                   ),
@@ -127,42 +145,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               ),
             );
           }
-          return const Center(child: Text("Cargando...", style: TextStyle(color: Colors.white)));
+          return const Center(
+            child: Text("Cargando...", style: TextStyle(color: Colors.white)),
+          );
         },
       ),
     );
   }
-}
-
-class _HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
-  const _HomeAppBar();
-
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      child: Container(
-        color: AppTheme.backgroundColor.withOpacity(0.9),
-        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStatChip(IconData icon, String label, Color color) {
-    return Row(
-      children: [
-        Icon(icon, color: color, size: 24),
-        const SizedBox(width: 8),
-        Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-      ],
-    );
-  }
-
-  @override
-  Size get preferredSize => const Size.fromHeight(60);
 }

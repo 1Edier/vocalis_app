@@ -54,6 +54,7 @@ dependencies:
   audioplayers: ^6.5.1    # Para reproducir el audio grabado
   path_provider: ^2.1.1   # Para obtener una ruta donde guardar el archivo
   flutter_tts: ^3.8.5
+  intl: ^0.20.2           # Para formatear fechas
 
 
 
