@@ -1,4 +1,3 @@
-import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:lottie/lottie.dart';
@@ -7,6 +6,7 @@ import 'package:vocalis/presentation/bloc/auth/auth_bloc.dart';
 import 'package:vocalis/presentation/screens/main_scaffold.dart';
 import '../../../data/models/process_audio_result.dart';
 import '../../bloc/exercise/exercise_bloc.dart';
+import '../../widgets/widgets.dart';
 
 class ExerciseScreen extends StatefulWidget {
   final String exerciseId;
@@ -74,7 +74,14 @@ class _ExerciseScreenState extends State<ExerciseScreen> {
           final exercise = (state as ExerciseReadyState).exercise;
           return Scaffold(
             backgroundColor: Theme.of(context).colorScheme.surface,
-            appBar: _ExerciseAppBar(level: exercise.orderIndex, title: exercise.title),
+            appBar: GlassAppBarWithSubtitle(
+              subtitle: 'NIVEL ${exercise.orderIndex}',
+              title: exercise.title,
+              onBackPressed: () {
+                context.read<ExerciseBloc>().add(StopAudioPlayback());
+                Navigator.of(context).pop(false);
+              },
+            ),
             body: _buildExerciseContent(context, state),
             bottomNavigationBar: _buildBottomBar(context),
           );
@@ -131,12 +138,12 @@ class _ExerciseScreenState extends State<ExerciseScreen> {
 
   Widget _buildTipsCard(BuildContext context, List<String> tips) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: isDark
-            ? const Color(0xFF1a2332) // bg-screen-center
+            ? VocalisColors.bgScreenCenter
             : Theme.of(context).colorScheme.secondaryContainer.withOpacity(0.3),
         borderRadius: BorderRadius.circular(16),
         border: Border(
@@ -195,61 +202,11 @@ class _ExerciseScreenState extends State<ExerciseScreen> {
   }
 
   Widget _buildProgressBar(BuildContext context, double score, int requiredScore) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    
-    return Column(
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              'Progreso para desbloquear',
-              style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
-            ),
-            Text(
-              '${score.toStringAsFixed(0)} / 100 puntos',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        Stack(
-          clipBehavior: Clip.none,
-          children: [
-            LinearProgressIndicator(
-              value: score / 100.0,
-              backgroundColor: isDark
-                  ? const Color(0xFF2B3A4A)
-                  : const Color(0xFFE0E7ED),
-              color: Theme.of(context).colorScheme.secondary, // Turquesa neón
-              minHeight: 8,
-              borderRadius: BorderRadius.circular(4),
-            ),
-            LayoutBuilder(
-              builder: (context, constraints) {
-                return Positioned(
-                  left: constraints.maxWidth * (requiredScore / 100.0),
-                  top: -3,
-                  bottom: -3,
-                  child: Container(
-                    width: 4,
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.surface,
-                      borderRadius: BorderRadius.circular(2),
-                      border: Border.all(
-                        color: Theme.of(context).colorScheme.secondary.withOpacity(0.5),
-                      ),
-                    ),
-                  ),
-                );
-              },
-            ),
-          ],
-        ),
-      ],
+    return VocalisProgressBar(
+      value: score,
+      markerPosition: requiredScore,
+      leftLabel: 'Progreso para desbloquear',
+      rightLabel: '${score.toStringAsFixed(0)} / 100 puntos',
     );
   }
 
@@ -266,21 +223,19 @@ class _ExerciseScreenState extends State<ExerciseScreen> {
       onPressed = null;
     }
 
-    return ElevatedButton.icon(
+    return VocalisPrimaryButton(
+      text: text,
+      icon: icon,
       onPressed: onPressed,
-      icon: Icon(icon, size: 24),
-      label: Text(text, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-      style: ElevatedButton.styleFrom(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        minimumSize: const Size(double.infinity, 50),
-      ),
     );
   }
 
   Widget _buildFeedbackOrActions(BuildContext context, ExerciseReadyState state) {
     if (state is ProcessingAudio) {
-      return const Padding(padding: EdgeInsets.symmetric(vertical: 16.0), child: Center(child: CircularProgressIndicator()));
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 16.0),
+        child: Center(child: CircularProgressIndicator()),
+      );
     }
     if (state is ProcessingSuccess || state is ProcessingFailure) {
       return Column(
@@ -302,33 +257,23 @@ class _ExerciseScreenState extends State<ExerciseScreen> {
     return Row(
       children: [
         Expanded(
-          child: OutlinedButton(
+          child: VocalisOutlinedButton(
+            text: 'Reintentar',
             onPressed: () {
               context.read<ExerciseBloc>().add(StopAudioPlayback());
               context.read<ExerciseBloc>().add(StartRecordingRequested());
             },
-            style: OutlinedButton.styleFrom(
-              foregroundColor: Theme.of(context).colorScheme.secondary,
-              side: BorderSide(color: Theme.of(context).colorScheme.secondary),
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-            child: const Text('Reintentar'),
           ),
         ),
         if (showContinueButton) ...[
           const SizedBox(width: 16),
           Expanded(
-            child: ElevatedButton(
+            child: VocalisPrimaryButton(
+              text: 'Continuar',
               onPressed: () {
                 context.read<ExerciseBloc>().add(StopAudioPlayback());
                 Navigator.of(context).pop(true);
               },
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-              child: const Text('Continuar'),
             ),
           ),
         ],
@@ -349,15 +294,16 @@ class _ExerciseScreenState extends State<ExerciseScreen> {
 
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(16), border: Border.all(color: borderColor.withOpacity(0.5))),
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: borderColor.withOpacity(0.5)),
+      ),
       child: Column(
         children: [
           Text(title, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: borderColor)),
           const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: List.generate(3, (index) => Icon(index < stars ? Icons.star_rounded : Icons.star_border_rounded, color: Colors.amber, size: 40)),
-          ),
+          StarsDisplay(earnedStars: stars, totalStars: 3, size: 40),
           const SizedBox(height: 8),
           Text('Puntuación: ${score.toStringAsFixed(0)} / 100', style: TextStyle(fontSize: 16, color: Colors.grey[700])),
           const SizedBox(height: 16),
@@ -376,57 +322,24 @@ class _ExerciseScreenState extends State<ExerciseScreen> {
   }
 
   Widget _buildBottomBar(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    
-    return Container(
-      decoration: BoxDecoration(
-        color: isDark
-            ? const Color(0xFF0b1016).withOpacity(0.5)
-            : Colors.white.withOpacity(0.7),
-        border: Border(
-          top: BorderSide(
-            color: isDark
-                ? const Color(0xFF2ce0bd).withOpacity(0.1)
-                : Colors.grey.withOpacity(0.15),
-            width: 1,
-          ),
-        ),
-      ),
-      child: ClipRect(
-        child: BackdropFilter(
-          filter: ui.ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-          child: BottomNavigationBar(
-            items: const <BottomNavigationBarItem>[
-              BottomNavigationBarItem(icon: Icon(Icons.home_rounded), label: 'Home'),
-              BottomNavigationBarItem(icon: Icon(Icons.flag_rounded), label: 'Metas'),
-              BottomNavigationBarItem(icon: Icon(Icons.people_alt_rounded), label: 'Ajustes'),
-            ],
-            currentIndex: 1,
-            selectedItemColor: Theme.of(context).colorScheme.secondary,
-            unselectedItemColor: Theme.of(context).colorScheme.onSurfaceVariant,
-            onTap: (index) {
-              if (index == 1) return;
+    return GlassBottomNavBar(
+      currentIndex: 1,
+      items: VocalisNavItems.mainItems,
+      onTap: (index) {
+        if (index == 1) return;
 
-              final authState = context.read<AuthBloc>().state;
-              if (authState is AuthSuccess) {
-                Navigator.of(context).pushAndRemoveUntil(
-                  MaterialPageRoute(builder: (_) => MainScaffold(user: authState.user, initialIndex: index)),
-                  (route) => false,
-                );
-              }
-            },
-            showSelectedLabels: false,
-            showUnselectedLabels: false,
-            type: BottomNavigationBarType.fixed,
-            backgroundColor: Colors.transparent,
-            elevation: 0,
-            iconSize: 28,
-          ),
-        ),
-      ),
+        final authState = context.read<AuthBloc>().state;
+        if (authState is AuthSuccess) {
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (_) => MainScaffold(user: authState.user, initialIndex: index)),
+            (route) => false,
+          );
+        }
+      },
     );
   }
 }
+
 class _FeedbackSectionWidget extends StatelessWidget {
   final String title;
   final List<String> items;
@@ -460,86 +373,6 @@ class _FeedbackSectionWidget extends StatelessWidget {
   }
 }
 
-class _ExerciseAppBar extends StatelessWidget implements PreferredSizeWidget {
-  final int level;
-  final String title;
-  const _ExerciseAppBar({required this.level, required this.title});
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    
-    return PreferredSize(
-      preferredSize: const Size.fromHeight(kToolbarHeight + 10),
-      child: ClipRect(
-        child: BackdropFilter(
-          filter: ui.ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-          child: AppBar(
-            backgroundColor: isDark
-                ? const Color(0xFF0b1016).withOpacity(0.7)
-                : Theme.of(context).colorScheme.primary.withOpacity(0.95),
-            elevation: 0,
-            centerTitle: true,
-            leading: IconButton(
-              icon: Icon(
-                Icons.arrow_back,
-                color: isDark
-                    ? const Color(0xFF2ce0bd)
-                    : Colors.white,
-              ),
-              onPressed: () {
-                context.read<ExerciseBloc>().add(StopAudioPlayback());
-                Navigator.of(context).pop(false);
-              },
-            ),
-            title: Column(
-              children: [
-                Text(
-                  'NIVEL $level',
-                  style: TextStyle(
-                    color: isDark
-                        ? Theme.of(context).colorScheme.onSurfaceVariant
-                        : Colors.white70,
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 1.5,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  title,
-                  style: TextStyle(
-                    color: isDark
-                        ? Theme.of(context).colorScheme.onSurface
-                        : Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-            flexibleSpace: Container(
-              decoration: BoxDecoration(
-                border: Border(
-                  bottom: BorderSide(
-                    color: isDark
-                        ? const Color(0xFF2ce0bd).withOpacity(0.1)
-                        : Colors.white.withOpacity(0.2),
-                    width: 1,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-  
-  @override
-  Size get preferredSize => const Size.fromHeight(kToolbarHeight + 10);
-}
-
 class LottieAudioPlayer extends StatefulWidget {
   final bool isPlaying;
   final bool isEnabled;
@@ -552,6 +385,7 @@ class LottieAudioPlayer extends StatefulWidget {
 
 class _LottieAudioPlayerState extends State<LottieAudioPlayer> with SingleTickerProviderStateMixin {
   late final AnimationController _lottieController;
+
   @override
   void initState() {
     super.initState();
@@ -563,6 +397,7 @@ class _LottieAudioPlayerState extends State<LottieAudioPlayer> with SingleTicker
       }
     });
   }
+
   @override
   void didUpdateWidget(covariant LottieAudioPlayer oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -575,11 +410,13 @@ class _LottieAudioPlayerState extends State<LottieAudioPlayer> with SingleTicker
       }
     }
   }
+
   @override
   void dispose() {
     _lottieController.dispose();
     super.dispose();
   }
+
   @override
   Widget build(BuildContext context) {
     return SizedBox(

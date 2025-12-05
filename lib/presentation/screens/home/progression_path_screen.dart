@@ -1,11 +1,10 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:vocalis/data/models/exercise_model.dart';
 import 'package:vocalis/presentation/bloc/progression/progression_bloc.dart';
 import 'package:vocalis/presentation/screens/exercise/exercise_screen.dart';
-import '../../../core/theme/app_theme.dart';
 import '../../../data/models/progression_map_model.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../widgets/widgets.dart';
 
 // Constantes de diseño
 const double _nodeSize = 85.0;
@@ -17,8 +16,6 @@ const Color _unlockedPlanetColor = Color(0xFF4DB6AC);
 const Color _completedPlanetColor = Color(0xFF4DB6AC);
 const Color _lockedPlanetColor = Color(0xFF757575);
 const Color _lineColor = Color(0x99E0E0E0);
-const Color _starColor = Color(0xFFFFD700);
-const Color _emptyStarColor = Color(0xB3BDBDBD);
 
 class ProgressionPathScreen extends StatelessWidget {
   final CategoryProgress categoryProgress;
@@ -98,7 +95,6 @@ class _PathNode extends StatelessWidget {
   Widget build(BuildContext context) {
     final bool isLocked = exercise.status == 'locked';
     final bool isAvailable = exercise.status == 'available';
-    final bool isCompleted = exercise.status == 'completed';
 
     Color planetColor;
     Widget nodeContent;
@@ -154,9 +150,9 @@ class _PathNode extends StatelessWidget {
         Positioned(
           top: 0,
           child: isLocked
-              ? _StarsDisplay(starCount: 3, iconSize: 22, color: _emptyStarColor, earned: false)
+              ? const StarsDisplay.locked()
               : (exercise.stars > 0
-              ? _StarsDisplay(starCount: exercise.stars, iconSize: 22, color: _starColor, earned: true)
+              ? StarsDisplay.earned(earnedStars: exercise.stars)
               : const SizedBox.shrink()),
         ),
       ],
@@ -171,34 +167,6 @@ class _PathNode extends StatelessWidget {
   Color _darken(Color color, [double amount = .1]) {
     final hsl = HSLColor.fromColor(color);
     return hsl.withLightness((hsl.lightness - amount).clamp(0.0, 1.0)).toColor();
-  }
-}
-
-class _StarsDisplay extends StatelessWidget {
-  final int starCount;
-  final double iconSize;
-  final Color color;
-  final bool earned;
-  const _StarsDisplay({required this.starCount, this.iconSize = 24.0, required this.color, this.earned = true});
-
-  @override
-  Widget build(BuildContext context) {
-    if (starCount <= 0) return const SizedBox.shrink();
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      mainAxisSize: MainAxisSize.min,
-      children: List.generate(starCount, (index) {
-        return Icon(
-          earned ? Icons.star_rounded : Icons.star_border_rounded,
-          color: color,
-          size: iconSize,
-          shadows: [
-            if (earned)
-              BoxShadow(color: Colors.black.withOpacity(0.5), blurRadius: 4, offset: const Offset(0, 1))
-          ],
-        );
-      }),
-    );
   }
 }
 

@@ -1,4 +1,3 @@
-import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:vocalis/data/repositories/progression_repository.dart';
@@ -7,6 +6,7 @@ import '../../../data/models/user_model.dart';
 import '../../../data/models/user_stats_summary.dart';
 import '../../bloc/auth/auth_bloc.dart';
 import '../../bloc/profile/profile_bloc.dart';
+import '../../widgets/widgets.dart';
 
 class ProfileScreen extends StatelessWidget {
   final UserModel user;
@@ -19,70 +19,41 @@ class ProfileScreen extends StatelessWidget {
         progressionRepository: RepositoryProvider.of<ProgressionRepository>(context),
       )..add(FetchProfileData()),
       child: Scaffold(
-        extendBodyBehindAppBar: true, // Extiende el body detrás del AppBar
-        appBar: PreferredSize(
-          preferredSize: const Size.fromHeight(kToolbarHeight),
-          child: ClipRect(
-            child: BackdropFilter(
-              filter: ui.ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-              child: AppBar(
-                backgroundColor: Theme.of(context).brightness == Brightness.dark
-                    ? const Color(0xFF0b1016).withOpacity(0.7) // Oscuro semitransparente
-                    : Colors.white.withOpacity(0.8), // Blanco semitransparente
-                elevation: 0,
-                title: Text(
-                  'Perfil',
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.onSurface,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                actions: [
-                  IconButton(
-                    tooltip: 'Cerrar Sesión',
-                    icon: Icon(
-                      Icons.logout,
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
-                    onPressed: () {
-                      showDialog(
-                        context: context,
-                        builder: (dialogContext) => AlertDialog(
-                          title: const Text('Cerrar Sesión'),
-                          content: const Text('¿Estás seguro de que quieres cerrar sesión?'),
-                          actions: [
-                            TextButton(
-                              child: const Text('Cancelar'),
-                              onPressed: () => Navigator.of(dialogContext).pop(),
-                            ),
-                            TextButton(
-                              child: const Text('Aceptar'),
-                              onPressed: () {
-                                Navigator.of(dialogContext).pop();
-                                context.read<AuthBloc>().add(LogoutRequested());
-                              },
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
-                ],
-                flexibleSpace: Container(
-                  decoration: BoxDecoration(
-                    border: Border(
-                      bottom: BorderSide(
-                        color: Theme.of(context).brightness == Brightness.dark
-                            ? const Color(0xFF2ce0bd).withOpacity(0.1) // Borde neón sutil
-                            : Colors.grey.withOpacity(0.2),
-                        width: 1,
-                      ),
-                    ),
-                  ),
-                ),
+        extendBodyBehindAppBar: true,
+        appBar: GlassAppBar(
+          title: 'Perfil',
+          showBackButton: false,
+          actions: [
+            IconButton(
+              tooltip: 'Cerrar Sesión',
+              icon: Icon(
+                Icons.logout,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
+              onPressed: () {
+                showDialog(
+                  context: context,
+                  builder: (dialogContext) => AlertDialog(
+                    title: const Text('Cerrar Sesión'),
+                    content: const Text('¿Estás seguro de que quieres cerrar sesión?'),
+                    actions: [
+                      TextButton(
+                        child: const Text('Cancelar'),
+                        onPressed: () => Navigator.of(dialogContext).pop(),
+                      ),
+                      TextButton(
+                        child: const Text('Aceptar'),
+                        onPressed: () {
+                          Navigator.of(dialogContext).pop();
+                          context.read<AuthBloc>().add(LogoutRequested());
+                        },
+                      ),
+                    ],
+                  ),
+                );
+              },
             ),
-          ),
+          ],
         ),
         body: RefreshIndicator(
           onRefresh: () async {
@@ -151,7 +122,6 @@ class ProfileScreen extends StatelessWidget {
                     height: 100,
                     fit: BoxFit.cover,
                     errorBuilder: (context, error, stackTrace) {
-                      print('Error loading image: $error');
                       return Container(
                         color: Theme.of(context).colorScheme.primaryContainer,
                         child: Icon(
@@ -162,11 +132,7 @@ class ProfileScreen extends StatelessWidget {
                       );
                     },
                     loadingBuilder: (context, child, loadingProgress) {
-                      if (loadingProgress == null) {
-                        print('Image loaded successfully');
-                        return child;
-                      }
-                      print('Loading image...');
+                      if (loadingProgress == null) return child;
                       return Container(
                         color: Theme.of(context).colorScheme.primaryContainer,
                         child: Center(
@@ -221,8 +187,8 @@ class ProfileScreen extends StatelessWidget {
 
   Widget _buildUserInfoCard(BuildContext context, UserModel user) {
     final dateFormat = DateFormat('dd/MM/yyyy');
-    final memberSince = user.createdAt != null 
-        ? dateFormat.format(user.createdAt!) 
+    final memberSince = user.createdAt != null
+        ? dateFormat.format(user.createdAt!)
         : 'No disponible';
 
     return Card(
@@ -329,15 +295,22 @@ class ProfileScreen extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 24),
-        Text('Desglose por Categoría', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontSize: 20)),
+        Text(
+          'Desglose por Categoría',
+          style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontSize: 20),
+        ),
         const SizedBox(height: 16),
         ...stats.byCategory.entries.map((entry) {
-          final categoryName = entry.key.isNotEmpty ? entry.key[0].toUpperCase() + entry.key.substring(1) : '';
-          return _CategoryStatItem(
+          final categoryName = entry.key.isNotEmpty
+              ? entry.key[0].toUpperCase() + entry.key.substring(1)
+              : '';
+          return VocalisCategoryProgressBar(
             categoryName: categoryName,
-            stat: entry.value,
+            completed: entry.value.completed,
+            total: entry.value.total,
+            stars: entry.value.stars,
           );
-        }).toList(),
+        }),
       ],
     );
   }
@@ -353,85 +326,22 @@ class _StatItem extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(value, style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.primary)),
+        Text(
+          value,
+          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+            fontWeight: FontWeight.bold,
+            color: Theme.of(context).colorScheme.primary,
+          ),
+        ),
         const SizedBox(height: 4),
-        Text(label, style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey[700])),
+        Text(
+          label,
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: Colors.grey[700],
+          ),
+        ),
       ],
     );
   }
 }
 
-class _CategoryStatItem extends StatelessWidget {
-  final String categoryName;
-  final CategoryStat stat;
-  const _CategoryStatItem({required this.categoryName, required this.stat});
-
-  @override
-  Widget build(BuildContext context) {
-    final double percentage = (stat.total > 0) ? stat.completed / stat.total : 0.0;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    
-    return Card(
-      elevation: 0,
-      color: isDark 
-          ? const Color(0xFF1a2332) // bg-screen-center en dark
-          : const Color(0xFFF8FAFB), // Gris muy claro en light
-      margin: const EdgeInsets.only(bottom: 12),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  categoryName,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).colorScheme.onSurface,
-                  ),
-                ),
-                Text(
-                  '${stat.completed} / ${stat.total}',
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            LinearProgressIndicator(
-              value: percentage,
-              backgroundColor: isDark
-                  ? const Color(0xFF2B3A4A) // Más oscuro en dark
-                  : const Color(0xFFE0E7ED), // Gris claro en light
-              color: Theme.of(context).colorScheme.secondary, // Turquesa neón
-              minHeight: 8,
-              borderRadius: BorderRadius.circular(4),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Icon(
-                  Icons.star_rounded,
-                  color: const Color(0xFFFFB020), // Amarillo dorado consistente
-                  size: 20,
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  '${stat.stars} estrellas obtenidas',
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ],
-            )
-          ],
-        ),
-      ),
-    );
-  }
-}

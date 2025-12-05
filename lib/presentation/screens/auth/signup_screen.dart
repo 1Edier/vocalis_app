@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../bloc/auth/auth_bloc.dart';
+import '../../widgets/widgets.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -16,7 +17,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final _ageController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  bool _obscurePassword = true;
 
   @override
   void dispose() {
@@ -34,7 +34,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
     if (value.trim().length < 3) {
       return 'El nombre debe tener al menos 3 caracteres';
     }
-    // Validar que contenga al menos dos palabras (nombre y apellido)
     if (value.trim().split(' ').where((word) => word.isNotEmpty).length < 2) {
       return 'Por favor ingresa nombre y apellido';
     }
@@ -70,35 +69,24 @@ class _SignUpScreenState extends State<SignUpScreen> {
   }
 
   String? _validatePassword(String? value) {
-    // 1. Validar que no esté vacío
     if (value == null || value.isEmpty) {
       return 'Por favor ingresa tu contraseña';
     }
-
-    // 2. Validar longitud (mínimo 8 caracteres)
     if (value.length < 8) {
       return 'La contraseña debe tener al menos 8 caracteres';
     }
-
-    // 3. Validar al menos una letra mayúscula
     if (!value.contains(RegExp(r'[A-Z]'))) {
       return 'La contraseña debe tener al menos una mayúscula';
     }
-
-    // 4. Validar al menos un número
     if (!value.contains(RegExp(r'[0-9]'))) {
       return 'La contraseña debe tener al menos un número';
     }
-
-    // 5. Validar al menos un carácter especial
-    // Este regex incluye símbolos comunes. Puedes agregar más si es necesario.
-    if (!value.contains(RegExp(r'[!@#\$%^&*(),.?":{}|<>]'))) {
+    if (!value.contains(RegExp(r'[!@#\$%^&*():{}|<>]'))) {
       return 'La contraseña debe tener al menos un carácter especial';
     }
-
-    return null; // Todo correcto
+    return null;
   }
-  
+
   void _handleSignUp() {
     if (_formKey.currentState!.validate()) {
       FocusScope.of(context).unfocus();
@@ -120,14 +108,14 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
     return Scaffold(
       backgroundColor: isDark
-          ? const Color(0xFF0b1016)
+          ? VocalisColors.bgScreenEdge
           : const Color(0xFFF5F7FA),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: BackButton(
           color: isDark
-              ? const Color(0xFF2ce0bd)
+              ? VocalisColors.neonTurquoise
               : Theme.of(context).colorScheme.primary,
         ),
       ),
@@ -138,8 +126,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   center: Alignment.center,
                   radius: 1.0,
                   colors: [
-                    Color(0xFF1a2332),
-                    Color(0xFF0b1016),
+                    VocalisColors.bgScreenCenter,
+                    VocalisColors.bgScreenEdge,
                   ],
                 ),
               )
@@ -173,195 +161,113 @@ class _SignUpScreenState extends State<SignUpScreen> {
                           ),
                         ],
                 ),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'Crear Cuenta',
-                      style: Theme.of(context).textTheme.displayLarge?.copyWith(fontSize: 36),
-                    ),
-                    SizedBox(height: screenWidth > 600 ? 32 : 24),
-                    _buildFullNameField(),
-                    const SizedBox(height: 16),
-                    _buildAgeField(),
-                    const SizedBox(height: 16),
-                    _buildEmailField(),
-                    const SizedBox(height: 16),
-                    _buildPasswordField(),
-                    const SizedBox(height: 32),
-                    BlocConsumer<AuthBloc, AuthState>(
-                      listener: (context, state) {
-                        if (state is AuthSignUpSuccess) {
-                          Navigator.of(context).pop();
-                        }
-                        if (state is AuthFailure) {
-                          ScaffoldMessenger.of(context)
-                            ..hideCurrentSnackBar()
-                            ..showSnackBar(SnackBar(
-                              content: Text(state.error),
-                              backgroundColor: Colors.redAccent,
-                            ));
-                        }
-                      },
-                      builder: (context, state) {
-                        return SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            onPressed: state is AuthLoading ? null : _handleSignUp,
-                            child: state is AuthLoading
-                                ? const SizedBox(
-                              height: 24,
-                              width: 24,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 3,
-                                color: Colors.white,
-                              ),
-                            )
-                                : const Text('Crear Cuenta'),
-                          ),
-                        );
-                      },
-                    ),
-                    const SizedBox(height: 24),
-                    Flexible(
-                      child: Wrap(
-                        alignment: WrapAlignment.center,
-                        crossAxisAlignment: WrapCrossAlignment.center,
-                        spacing: 4,
-                        runSpacing: 4,
-                        children: [
-                          Text(
-                            '¿Ya tienes una cuenta?',
-                            style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontSize: 14),
-                            textAlign: TextAlign.center,
-                          ),
-                          InkWell(
-                            onTap: () => Navigator.pop(context),
-                            child: Text(
-                          'Inicia Sesión',
-                          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                            color: Theme.of(context).colorScheme.primary,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14,
-                          ),
-                              textAlign: TextAlign.center,
-                            ),
-                          ),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Crear Cuenta',
+                        style: Theme.of(context).textTheme.displayLarge?.copyWith(fontSize: 36),
+                      ),
+                      SizedBox(height: screenWidth > 600 ? 32 : 24),
+                      VocalisTextField(
+                        label: 'Nombre Completo',
+                        hintText: 'Juan Pérez',
+                        controller: _fullNameController,
+                        validator: _validateFullName,
+                        textCapitalization: TextCapitalization.words,
+                        prefixIcon: const Icon(Icons.person_outline),
+                      ),
+                      const SizedBox(height: 16),
+                      VocalisTextField(
+                        label: 'Edad (15-55)',
+                        hintText: '25',
+                        controller: _ageController,
+                        validator: _validateAge,
+                        keyboardType: TextInputType.number,
+                        prefixIcon: const Icon(Icons.cake_outlined),
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                          LengthLimitingTextInputFormatter(2),
                         ],
                       ),
-                    )
-                  ],
-                ),
+                      const SizedBox(height: 16),
+                      VocalisTextField(
+                        label: 'Email',
+                        hintText: 'ejemplo@gmail.com',
+                        controller: _emailController,
+                        validator: _validateEmail,
+                        keyboardType: TextInputType.emailAddress,
+                        prefixIcon: const Icon(Icons.email_outlined),
+                      ),
+                      const SizedBox(height: 16),
+                      VocalisPasswordField(
+                        label: 'Password',
+                        hintText: '••••••••',
+                        controller: _passwordController,
+                        validator: _validatePassword,
+                        prefixIcon: const Icon(Icons.lock_outline),
+                      ),
+                      const SizedBox(height: 32),
+                      BlocConsumer<AuthBloc, AuthState>(
+                        listener: (context, state) {
+                          if (state is AuthSignUpSuccess) {
+                            Navigator.of(context).pop();
+                          }
+                          if (state is AuthFailure) {
+                            ScaffoldMessenger.of(context)
+                              ..hideCurrentSnackBar()
+                              ..showSnackBar(SnackBar(
+                                content: Text(state.error),
+                                backgroundColor: Colors.redAccent,
+                              ));
+                          }
+                        },
+                        builder: (context, state) {
+                          return VocalisPrimaryButton(
+                            text: 'Crear Cuenta',
+                            isLoading: state is AuthLoading,
+                            onPressed: _handleSignUp,
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 24),
+                      Flexible(
+                        child: Wrap(
+                          alignment: WrapAlignment.center,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          spacing: 4,
+                          runSpacing: 4,
+                          children: [
+                            Text(
+                              '¿Ya tienes una cuenta?',
+                              style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontSize: 14),
+                              textAlign: TextAlign.center,
+                            ),
+                            InkWell(
+                              onTap: () => Navigator.pop(context),
+                              child: Text(
+                                'Inicia Sesión',
+                                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                  color: Theme.of(context).colorScheme.primary,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    ],
+                  ),
                 ),
               ),
             ),
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildFullNameField() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(left: 16.0, bottom: 8.0),
-          child: Text('Nombre Completo', style: Theme.of(context).textTheme.labelLarge),
-        ),
-        TextFormField(
-          controller: _fullNameController,
-          validator: _validateFullName,
-          textCapitalization: TextCapitalization.words,
-          style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
-          decoration: const InputDecoration(
-            prefixIcon: Icon(Icons.person_outline),
-            hintText: 'Juan Pérez',
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildAgeField() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(left: 16.0, bottom: 8.0),
-          child: Text('Edad (15-55)', style: Theme.of(context).textTheme.labelLarge),
-        ),
-        TextFormField(
-          controller: _ageController,
-          validator: _validateAge,
-          keyboardType: TextInputType.number,
-          style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
-          inputFormatters: [
-            FilteringTextInputFormatter.digitsOnly,
-            LengthLimitingTextInputFormatter(2),
-          ],
-          decoration: const InputDecoration(
-            prefixIcon: Icon(Icons.cake_outlined),
-            hintText: '25',
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildEmailField() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(left: 16.0, bottom: 8.0),
-          child: Text('Email', style: Theme.of(context).textTheme.labelLarge),
-        ),
-        TextFormField(
-          controller: _emailController,
-          validator: _validateEmail,
-          keyboardType: TextInputType.emailAddress,
-          style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
-          decoration: const InputDecoration(
-            prefixIcon: Icon(Icons.email_outlined),
-            hintText: 'ejemplo@gmail.com',
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildPasswordField() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(left: 16.0, bottom: 8.0),
-          child: Text('Password', style: Theme.of(context).textTheme.labelLarge),
-        ),
-        TextFormField(
-          controller: _passwordController,
-          validator: _validatePassword,
-          obscureText: _obscurePassword,
-          style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
-          decoration: InputDecoration(
-            prefixIcon: const Icon(Icons.lock_outline),
-            hintText: '••••••••',
-            suffixIcon: IconButton(
-              icon: Icon(
-                _obscurePassword ? Icons.visibility_off : Icons.visibility,
-              ),
-              onPressed: () {
-                setState(() {
-                  _obscurePassword = !_obscurePassword;
-                });
-              },
-            ),
-          ),
-        ),
-      ],
     );
   }
 }

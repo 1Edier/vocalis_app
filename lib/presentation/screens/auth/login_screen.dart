@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../bloc/auth/auth_bloc.dart';
+import '../../widgets/widgets.dart';
 import '../main_scaffold.dart';
 import 'signup_screen.dart';
 
@@ -15,7 +16,6 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  bool _obscurePassword = true;
 
   @override
   void dispose() {
@@ -28,7 +28,6 @@ class _LoginScreenState extends State<LoginScreen> {
     if (value == null || value.isEmpty) {
       return 'Por favor ingresa tu email';
     }
-    // Expresión regular para validar email
     final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
     if (!emailRegex.hasMatch(value)) {
       return 'Por favor ingresa un email válido';
@@ -62,13 +61,12 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final horizontalPadding = screenWidth > 600 ? 24.0 : 16.0;
-    
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     return Scaffold(
       backgroundColor: isDark
-          ? const Color(0xFF0b1016) // bg-screen-edge en dark
-          : const Color(0xFFF5F7FA), // Gris claro en light
+          ? VocalisColors.bgScreenEdge
+          : const Color(0xFFF5F7FA),
       body: Container(
         decoration: isDark
             ? const BoxDecoration(
@@ -76,8 +74,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   center: Alignment.center,
                   radius: 1.0,
                   colors: [
-                    Color(0xFF1a2332), // bg-screen-center
-                    Color(0xFF0b1016), // bg-screen-edge
+                    VocalisColors.bgScreenCenter,
+                    VocalisColors.bgScreenEdge,
                   ],
                 ),
               )
@@ -111,159 +109,107 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ],
                 ),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'Vocalis',
-                      style: Theme.of(context).textTheme.displayLarge,
-                    ),
-                    SizedBox(height: screenWidth > 600 ? 48 : 32),
-                    _buildEmailField(),
-                    const SizedBox(height: 16),
-                    _buildPasswordField(),
-                    const SizedBox(height: 32),
-                    BlocConsumer<AuthBloc, AuthState>(
-                      listener: (context, state) {
-                        if (state is AuthSuccess) {
-                          Navigator.of(context).pushAndRemoveUntil(
-                            MaterialPageRoute(builder: (_) => MainScaffold(user: state.user)),
-                                (route) => false,
-                          );
-                        }
-                        if (state is AuthFailure) {
-                          if (state.error != "Sesión cerrada." && state.error != "No hay sesión activa.") {
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Vocalis',
+                        style: Theme.of(context).textTheme.displayLarge,
+                      ),
+                      SizedBox(height: screenWidth > 600 ? 48 : 32),
+                      VocalisTextField(
+                        label: 'Email',
+                        hintText: 'ejemplo@gmail.com',
+                        controller: _emailController,
+                        validator: _validateEmail,
+                        keyboardType: TextInputType.emailAddress,
+                      ),
+                      const SizedBox(height: 16),
+                      VocalisPasswordField(
+                        label: 'Password',
+                        hintText: '••••••••',
+                        controller: _passwordController,
+                        validator: _validatePassword,
+                      ),
+                      const SizedBox(height: 32),
+                      BlocConsumer<AuthBloc, AuthState>(
+                        listener: (context, state) {
+                          if (state is AuthSuccess) {
+                            Navigator.of(context).pushAndRemoveUntil(
+                              MaterialPageRoute(builder: (_) => MainScaffold(user: state.user)),
+                              (route) => false,
+                            );
+                          }
+                          if (state is AuthFailure) {
+                            if (state.error != "Sesión cerrada." && state.error != "No hay sesión activa.") {
+                              ScaffoldMessenger.of(context)
+                                ..hideCurrentSnackBar()
+                                ..showSnackBar(SnackBar(
+                                  content: Text(state.error),
+                                  backgroundColor: Colors.redAccent,
+                                ));
+                            }
+                          }
+                          if (state is AuthSignUpSuccess) {
                             ScaffoldMessenger.of(context)
                               ..hideCurrentSnackBar()
-                              ..showSnackBar(SnackBar(
-                                content: Text(state.error),
-                                backgroundColor: Colors.redAccent,
+                              ..showSnackBar(const SnackBar(
+                                content: Text('¡Cuenta creada! Por favor, inicia sesión.'),
+                                backgroundColor: Colors.green,
                               ));
                           }
-                        }
-                        if (state is AuthSignUpSuccess) {
-                          ScaffoldMessenger.of(context)
-                            ..hideCurrentSnackBar()
-                            ..showSnackBar(const SnackBar(
-                              content: Text('¡Cuenta creada! Por favor, inicia sesión.'),
-                              backgroundColor: Colors.green,
-                            ));
-                        }
-                      },
-                      builder: (context, state) {
-                        return SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            onPressed: state is AuthLoading ? null : _handleLogin,
-                            child: state is AuthLoading
-                                ? const SizedBox(
-                              height: 24,
-                              width: 24,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 3,
-                                color: Colors.white,
-                              ),
-                            )
-                                : const Text('Entrar'),
-                          ),
-                        );
-                      },
-                    ),
-                    const SizedBox(height: 24),
-                    Flexible(
-                      child: Wrap(
-                        alignment: WrapAlignment.center,
-                        crossAxisAlignment: WrapCrossAlignment.center,
-                        spacing: 4,
-                        runSpacing: 4,
-                        children: [
-                          Text(
-                            '¿No tienes una cuenta?',
-                            style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontSize: 14),
-                            textAlign: TextAlign.center,
-                          ),
-                          InkWell(
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(builder: (context) => const SignUpScreen()),
-                              );
-                            },
-                            child: Text(
-                          'Crear Cuenta',
-                          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                            color: Theme.of(context).colorScheme.primary,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14,
-                          ),
+                        },
+                        builder: (context, state) {
+                          return VocalisPrimaryButton(
+                            text: 'Entrar',
+                            isLoading: state is AuthLoading,
+                            onPressed: _handleLogin,
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 24),
+                      Flexible(
+                        child: Wrap(
+                          alignment: WrapAlignment.center,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          spacing: 4,
+                          runSpacing: 4,
+                          children: [
+                            Text(
+                              '¿No tienes una cuenta?',
+                              style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontSize: 14),
                               textAlign: TextAlign.center,
                             ),
-                          ),
-                        ],
-                      ),
-                    )
-                  ],
-                ),
+                            InkWell(
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(builder: (context) => const SignUpScreen()),
+                                );
+                              },
+                              child: Text(
+                                'Crear Cuenta',
+                                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                  color: Theme.of(context).colorScheme.primary,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    ],
+                  ),
                 ),
               ),
             ),
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildEmailField() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(left: 16.0, bottom: 8.0),
-          child: Text('Email', style: Theme.of(context).textTheme.labelLarge),
-        ),
-        TextFormField(
-          controller: _emailController,
-          keyboardType: TextInputType.emailAddress,
-          validator: _validateEmail,
-          style: TextStyle(color: Theme.of(context).colorScheme.onSurface), // Color del texto
-          decoration: InputDecoration(
-            hintText: 'ejemplo@gmail.com',
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildPasswordField() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(left: 16.0, bottom: 8.0),
-          child: Text('Password', style: Theme.of(context).textTheme.labelLarge),
-        ),
-        TextFormField(
-          controller: _passwordController,
-          obscureText: _obscurePassword,
-          validator: _validatePassword,
-          style: TextStyle(color: Theme.of(context).colorScheme.onSurface), // Color del texto
-          decoration: InputDecoration(
-            hintText: '••••••••',
-            suffixIcon: IconButton(
-              icon: Icon(
-                _obscurePassword ? Icons.visibility_off : Icons.visibility,
-              ),
-              onPressed: () {
-                setState(() {
-                  _obscurePassword = !_obscurePassword;
-                });
-              },
-            ),
-          ),
-        ),
-      ],
     );
   }
 }
