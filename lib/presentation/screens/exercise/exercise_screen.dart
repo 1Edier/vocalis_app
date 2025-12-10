@@ -1,9 +1,11 @@
+// lib/presentation/screens/exercise/exercise_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:lottie/lottie.dart';
+import 'package:vocalis/core/routing/app_routes.dart';
 import 'package:vocalis/data/repositories/progression_repository.dart';
 import 'package:vocalis/presentation/bloc/auth/auth_bloc.dart';
-import 'package:vocalis/presentation/screens/main_scaffold.dart';
 import '../../../data/models/process_audio_result.dart';
 import '../../bloc/exercise/exercise_bloc.dart';
 import '../../widgets/widgets.dart';
@@ -79,7 +81,8 @@ class _ExerciseScreenState extends State<ExerciseScreen> {
               title: exercise.title,
               onBackPressed: () {
                 context.read<ExerciseBloc>().add(StopAudioPlayback());
-                Navigator.of(context).pop(false);
+                // Hacemos pop con 'false' para indicar que el ejercicio NO fue completado
+                context.pop(false);
               },
             ),
             body: _buildExerciseContent(context, state),
@@ -272,7 +275,8 @@ class _ExerciseScreenState extends State<ExerciseScreen> {
               text: 'Continuar',
               onPressed: () {
                 context.read<ExerciseBloc>().add(StopAudioPlayback());
-                Navigator.of(context).pop(true);
+                // Hacemos pop con 'true' para indicar que el ejercicio SÍ fue completado
+                context.pop(true);
               },
             ),
           ),
@@ -323,17 +327,15 @@ class _ExerciseScreenState extends State<ExerciseScreen> {
 
   Widget _buildBottomBar(BuildContext context) {
     return GlassBottomNavBar(
-      currentIndex: 1,
+      currentIndex: 1, // El botón de atajo está "seleccionado" en esta pantalla
       items: VocalisNavItems.mainItems,
       onTap: (index) {
-        if (index == 1) return;
-
-        final authState = context.read<AuthBloc>().state;
-        if (authState is AuthSuccess) {
-          Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(builder: (_) => MainScaffold(user: authState.user, initialIndex: index)),
-            (route) => false,
-          );
+        if (index == 1) return; // Ya estamos en un ejercicio
+        // Usamos context.go para reemplazar la pila de navegación y volver a la shell
+        if (index == 0) {
+          context.go(AppRoutes.homeMap);
+        } else if (index == 2) {
+          context.go(AppRoutes.homeProfile);
         }
       },
     );

@@ -1,6 +1,8 @@
+// lib/presentation/screens/auth/signup_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import '../../bloc/auth/auth_bloc.dart';
 import '../../widgets/widgets.dart';
 
@@ -122,15 +124,15 @@ class _SignUpScreenState extends State<SignUpScreen> {
       body: Container(
         decoration: isDark
             ? const BoxDecoration(
-                gradient: RadialGradient(
-                  center: Alignment.center,
-                  radius: 1.0,
-                  colors: [
-                    VocalisColors.bgScreenCenter,
-                    VocalisColors.bgScreenEdge,
-                  ],
-                ),
-              )
+          gradient: RadialGradient(
+            center: Alignment.center,
+            radius: 1.0,
+            colors: [
+              VocalisColors.bgScreenCenter,
+              VocalisColors.bgScreenEdge,
+            ],
+          ),
+        )
             : null,
         child: SafeArea(
           child: Center(
@@ -147,19 +149,19 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   borderRadius: BorderRadius.circular(24.0),
                   border: isDark
                       ? Border.all(
-                          color: Theme.of(context).colorScheme.outline.withOpacity(0.3),
-                          width: 1,
-                        )
+                    color: Theme.of(context).colorScheme.outline.withOpacity(0.3),
+                    width: 1,
+                  )
                       : null,
                   boxShadow: isDark
                       ? null
                       : [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.08),
-                            blurRadius: 24,
-                            offset: const Offset(0, 8),
-                          ),
-                        ],
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.08),
+                      blurRadius: 24,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
                 ),
                 child: Form(
                   key: _formKey,
@@ -212,9 +214,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       const SizedBox(height: 32),
                       BlocConsumer<AuthBloc, AuthState>(
                         listener: (context, state) {
-                          if (state is AuthSignUpSuccess) {
-                            Navigator.of(context).pop();
-                          }
+                          // Después del registro, el usuario es logueado automáticamente.
+                          // La redirección de GoRouter manejará la navegación a la pantalla de inicio.
+                          // Solo necesitamos manejar posibles errores.
                           if (state is AuthFailure) {
                             ScaffoldMessenger.of(context)
                               ..hideCurrentSnackBar()
@@ -246,7 +248,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                               textAlign: TextAlign.center,
                             ),
                             InkWell(
-                              onTap: () => Navigator.pop(context),
+                              onTap: () => context.pop(),
                               child: Text(
                                 'Inicia Sesión',
                                 style: Theme.of(context).textTheme.bodyLarge?.copyWith(

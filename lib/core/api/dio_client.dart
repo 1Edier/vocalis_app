@@ -1,11 +1,10 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
-const String _myLocalIp = '192.168.1.68'; // <<< ¡RECUERDA PONER TU IP AQUÍ!
+const String _myLocalIp = '192.168.1.68';
 
-const String _authBaseUrl = 'https://api-gateway.politecoast-4396a3db.eastus.azurecontainerapps.io/api/v1';
-const String _exercisesBaseUrl = 'https://api-gateway.politecoast-4396a3db.eastus.azurecontainerapps.io/api/v1';
-const String _validationBaseUrl = 'https://api-gateway.politecoast-4396a3db.eastus.azurecontainerapps.io/api/v1';
+const String _BaseUrl = 'https://api-gateway.politecoast-4396a3db.eastus.azurecontainerapps.io/api/v1';
+
 
 class DioClient {
   static final _storage = const FlutterSecureStorage();
@@ -40,7 +39,7 @@ class DioClient {
   }
 
   static Dio createAuthDio() {
-    final dio = Dio(BaseOptions(baseUrl: _authBaseUrl));
+    final dio = Dio(BaseOptions(baseUrl: _BaseUrl));
     dio.interceptors.add(_getAuthInterceptor());
     return dio;
   }
@@ -48,19 +47,19 @@ class DioClient {
   // --- CORRECCIÓN ---
   // El cliente de ejercicios ahora también necesita el token de autenticación.
   static Dio createExercisesDio() {
-    final dio = Dio(BaseOptions(baseUrl: _exercisesBaseUrl));
+    final dio = Dio(BaseOptions(baseUrl: _BaseUrl));
     dio.interceptors.add(_getAuthInterceptor());
     return dio;
   }
 
   static Dio createValidationDio() {
-    final dio = Dio(BaseOptions(baseUrl: _validationBaseUrl));
-    // Este servicio también requiere autenticación, así que le añadimos el interceptor.
-    dio.interceptors.add(_getAuthInterceptor()); // <<< LÍNEA AÑADIDA
+    final dio = Dio(BaseOptions(baseUrl: _BaseUrl));
+
+    dio.interceptors.add(_getAuthInterceptor());
     return dio;
   }
   static Dio createProgressionDio() {
-    final dio = Dio(BaseOptions(baseUrl: _exercisesBaseUrl));
+    final dio = Dio(BaseOptions(baseUrl: _BaseUrl));
     // Este servicio necesita el token de autenticación
     dio.interceptors.add(_getAuthInterceptor());
     return dio;

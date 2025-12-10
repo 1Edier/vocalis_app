@@ -1,9 +1,10 @@
+// lib/presentation/screens/auth/login_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
+import 'package:vocalis/core/routing/app_routes.dart';
 import '../../bloc/auth/auth_bloc.dart';
 import '../../widgets/widgets.dart';
-import '../main_scaffold.dart';
-import 'signup_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -40,7 +41,7 @@ class _LoginScreenState extends State<LoginScreen> {
       return 'Por favor ingresa tu contraseña';
     }
     if (value.length < 8) {
-      return 'La contraseña debe tener al menos 6 caracteres';
+      return 'La contraseña debe tener al menos 8 caracteres';
     }
     return null;
   }
@@ -70,15 +71,15 @@ class _LoginScreenState extends State<LoginScreen> {
       body: Container(
         decoration: isDark
             ? const BoxDecoration(
-                gradient: RadialGradient(
-                  center: Alignment.center,
-                  radius: 1.0,
-                  colors: [
-                    VocalisColors.bgScreenCenter,
-                    VocalisColors.bgScreenEdge,
-                  ],
-                ),
-              )
+          gradient: RadialGradient(
+            center: Alignment.center,
+            radius: 1.0,
+            colors: [
+              VocalisColors.bgScreenCenter,
+              VocalisColors.bgScreenEdge,
+            ],
+          ),
+        )
             : null,
         child: SafeArea(
           child: Center(
@@ -95,19 +96,19 @@ class _LoginScreenState extends State<LoginScreen> {
                   borderRadius: BorderRadius.circular(24.0),
                   border: isDark
                       ? Border.all(
-                          color: Theme.of(context).colorScheme.outline.withOpacity(0.3),
-                          width: 1,
-                        )
+                    color: Theme.of(context).colorScheme.outline.withOpacity(0.3),
+                    width: 1,
+                  )
                       : null,
                   boxShadow: isDark
                       ? null
                       : [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.08),
-                            blurRadius: 24,
-                            offset: const Offset(0, 8),
-                          ),
-                        ],
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.08),
+                      blurRadius: 24,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
                 ),
                 child: Form(
                   key: _formKey,
@@ -136,12 +137,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       const SizedBox(height: 32),
                       BlocConsumer<AuthBloc, AuthState>(
                         listener: (context, state) {
-                          if (state is AuthSuccess) {
-                            Navigator.of(context).pushAndRemoveUntil(
-                              MaterialPageRoute(builder: (_) => MainScaffold(user: state.user)),
-                              (route) => false,
-                            );
-                          }
+                          // La redirección de GoRouter maneja la navegación en caso de éxito.
+                          // Solo necesitamos escuchar los fallos para mostrar un SnackBar.
                           if (state is AuthFailure) {
                             if (state.error != "Sesión cerrada." && state.error != "No hay sesión activa.") {
                               ScaffoldMessenger.of(context)
@@ -184,10 +181,8 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                             InkWell(
                               onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(builder: (context) => const SignUpScreen()),
-                                );
+                                // Usamos go_router para navegar a la pantalla de registro
+                                context.push(AppRoutes.signup);
                               },
                               child: Text(
                                 'Crear Cuenta',

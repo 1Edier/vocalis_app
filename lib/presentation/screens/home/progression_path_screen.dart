@@ -1,7 +1,9 @@
+// lib/presentation/screens/progression_path_screen.dart
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:vocalis/core/routing/app_routes.dart';
 import 'package:vocalis/presentation/bloc/progression/progression_bloc.dart';
-import 'package:vocalis/presentation/screens/exercise/exercise_screen.dart';
 import '../../../data/models/progression_map_model.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../widgets/widgets.dart';
@@ -122,9 +124,11 @@ class _PathNode extends StatelessWidget {
               if (isAvailable) PulsingRing(color: planetColor),
               InkWell(
                 onTap: isLocked ? null : () async {
-                  final result = await Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => ExerciseScreen(exerciseId: exercise.exerciseId)),
+                  // Hacemos push a la pantalla de ejercicio y esperamos un resultado booleano
+                  final result = await context.push<bool>(
+                      AppRoutes.exerciseDetail(exercise.exerciseId)
                   );
+                  // Si el ejercicio fue completado (resultado es true), recargamos el mapa
                   if (result == true && context.mounted) {
                     context.read<ProgressionBloc>().add(FetchProgressionMap());
                   }
